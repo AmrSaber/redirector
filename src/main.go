@@ -13,7 +13,6 @@ import (
 )
 
 // TODO: Get configuration with redirection rules -- read configuration from (file, URL, environment variable)
-// TODO: Add tests
 
 func main() {
 	var configs *config.Config
@@ -90,7 +89,7 @@ func attachRedirectionHandler(configs *config.Config) {
 
 		redirectPath := redirectInfo.To
 
-		if redirectInfo.IsWildCard {
+		if redirectInfo.PreservePath {
 			redirectPath = path.Join(redirectPath, r.URL.Path)
 		}
 
