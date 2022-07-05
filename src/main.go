@@ -15,12 +15,30 @@ import (
 
 const URL_ENV_NAME = "CONFIG_URL"
 
+// TODO:
+// 1. Watch config file for changes
+// 2. Cache config file from URL and invalidate the cache after some time (adjustable from config)
+
 func main() {
+	godotenv.Load()
+
+	configs := loadConfig()
+	if configs == nil {
+		log.Fatal("No configuration provided")
+	}
+
+	attachRedirectionHandler(configs)
+
+	fmt.Println("Starting server...")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatal("Could not start server: ", err)
+	}
+}
+
+func loadConfig() *config.Config {
 	var configs *config.Config
 	var file string
 	var url string
-
-	godotenv.Load()
 
 	flag.StringVar(&file, "file", "", "YAML file containing configuration")
 	flag.StringVar(&url, "url", "", "URL containing configuration yaml file")
@@ -67,16 +85,7 @@ func main() {
 		}
 	}
 
-	if configs == nil {
-		log.Fatal("No configuration provided")
-	}
-
-	attachRedirectionHandler(configs)
-
-	fmt.Println("Starting server...")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		log.Fatal("Could not start server: ", err)
-	}
+	return configs
 }
 
 func attachRedirectionHandler(configs *config.Config) {
