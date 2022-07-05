@@ -54,12 +54,12 @@ func (c *Config) Load() error {
 	case SOURCE_URL:
 		res, err := http.Get(c.configURI)
 		if err != nil {
-			log.Fatal(err)
+			return nil
 		}
 
 		yamlBody, err = ioutil.ReadAll(res.Body)
 		if err != nil {
-			log.Fatal(err)
+			return nil
 		}
 
 		res.Body.Close()
