@@ -1,0 +1,20 @@
+name: Run tests
+
+on:
+  push
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup go
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.18'
+
+      - name: Run tests
+        run: go test -v -race -timeout 5s ./...
