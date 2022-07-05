@@ -16,7 +16,6 @@ import (
 )
 
 // TODO:
-// 2. Cache config file from URL and invalidate the cache after some time (adjustable from config)
 // 3. Add tests to github actions workflow
 // 4. Dockerize the app
 // 5. Add github actions workflow to auto-publish docker image on github
