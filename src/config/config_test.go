@@ -4,52 +4,6 @@ import (
 	"testing"
 )
 
-func TestConfigFromYaml(t *testing.T) {
-	yml :=
-		`
-redirects:
-  - from: example.com
-    to: https://target.com
-    preserve-path: false
-
-  - from: "*.example.com"
-    to: https://general-target.com
-    preserve-path: true
-`
-
-	config, err := ConfigFromYaml([]byte(yml))
-	if err != nil {
-		t.Errorf("unexpected error: %s", err)
-		return
-	}
-
-	if len(config.Redirects) != 2 {
-		t.Errorf("expected 2 redirects, got %d", len(config.Redirects))
-	}
-
-	wanted := Config{
-		Redirects: []Redirect{
-			{From: "example.com", To: "https://target.com", PreservePath: false},
-			{From: "*.example.com", To: "https://general-target.com", PreservePath: true},
-		},
-	}
-
-	for i, r := range wanted.Redirects {
-		got := config.Redirects[i]
-		if r.From != got.From {
-			t.Errorf("expected 'from' %s, got %s", r.From, got.From)
-		}
-
-		if r.To != got.To {
-			t.Errorf("expected 'to' %s, got %s", r.To, got.To)
-		}
-
-		if r.PreservePath != got.PreservePath {
-			t.Errorf("expected 'preserve-path' %t, got %t", r.PreservePath, got.PreservePath)
-		}
-	}
-}
-
 func TestConfigValidation(t *testing.T) {
 	// Test happy scenario
 	configs := Config{

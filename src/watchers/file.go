@@ -2,19 +2,18 @@ package watchers
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 
 	"github.com/fsnotify/fsnotify"
 )
 
-func WatchConfigFile(ctx context.Context, filePath string) (chan []byte, error) {
+func WatchConfigFile(ctx context.Context, filePath string) (<-chan any, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
 	}
 
-	fileChan := make(chan []byte)
+	updateChan := make(chan any)
 
 	go func() {
 		for {
@@ -25,15 +24,7 @@ func WatchConfigFile(ctx context.Context, filePath string) (chan []byte, error) 
 				}
 
 				if event.Op == fsnotify.Write {
-					log.Println("Config file changed, reloading...")
-
-					yamlFile, err := ioutil.ReadFile(filePath)
-					if err != nil {
-						log.Println("Could not read config file: ", err)
-						continue
-					}
-
-					fileChan <- yamlFile
+					updateChan <- nil
 				}
 
 			case err, ok := <-watcher.Errors:
@@ -45,7 +36,7 @@ func WatchConfigFile(ctx context.Context, filePath string) (chan []byte, error) 
 
 			case <-ctx.Done():
 				log.Println("Stopping file watcher...")
-				close(fileChan)
+				close(updateChan)
 				watcher.Close()
 				return
 			}
@@ -54,9 +45,10 @@ func WatchConfigFile(ctx context.Context, filePath string) (chan []byte, error) 
 
 	err = watcher.Add(filePath)
 	if err != nil {
+		close(updateChan)
 		watcher.Close()
 		return nil, err
 	}
 
-	return fileChan, nil
+	return updateChan, nil
 }

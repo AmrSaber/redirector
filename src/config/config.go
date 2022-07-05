@@ -2,13 +2,24 @@ package config
 
 import (
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	SOURCE_FILE = "source-file"
+	SOURCE_URL  = "source-url"
+)
+
 type Config struct {
+	source    string `yaml:"-"`
+	configURI string `yaml:"-"`
+
 	Redirects []Redirect `yaml:"redirects"`
 }
 
@@ -18,18 +29,50 @@ type Redirect struct {
 	PreservePath bool   `yaml:"preserve-path"`
 }
 
-func ConfigFromYaml(yamlFile []byte) (*Config, error) {
-	var config Config
+func NewConfig(source, uri string) *Config {
+	return &Config{
+		source:    source,
+		configURI: uri,
+	}
+}
 
-	if err := yaml.Unmarshal(yamlFile, &config); err != nil {
-		return nil, fmt.Errorf("could not parse configs from yaml: %s", err)
+func (c *Config) Load() error {
+	var yamlBody []byte
+	var err error
+
+	switch c.source {
+	case SOURCE_FILE:
+		yamlBody, err = ioutil.ReadFile(c.configURI)
+		if err != nil {
+			return err
+		}
+
+	case SOURCE_URL:
+		res, err := http.Get(c.configURI)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		yamlBody, err = ioutil.ReadAll(res.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		res.Body.Close()
 	}
 
-	if err := config.Validate(); err != nil {
-		return nil, fmt.Errorf("invalid configurations:\n%s", err)
+	var parsedConfig Config
+	if err := yaml.Unmarshal(yamlBody, &parsedConfig); err != nil {
+		return fmt.Errorf("could not parse configs from yaml: %s", err)
 	}
 
-	return &config, nil
+	if err := parsedConfig.Validate(); err != nil {
+		return fmt.Errorf("invalid configurations:\n%s", err)
+	}
+
+	c.CopyFrom(&parsedConfig)
+
+	return nil
 }
 
 // Validates the config
