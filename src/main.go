@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -10,6 +11,7 @@ import (
 	"path"
 
 	"github.com/AmrSaber/redirector/src/config"
+	"github.com/AmrSaber/redirector/src/watchers"
 	"github.com/joho/godotenv"
 )
 
@@ -23,23 +25,28 @@ import (
 const URL_ENV_NAME = "CONFIG_URL"
 
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	godotenv.Load()
 
-	configs := loadConfig()
+	configs := loadConfig(ctx)
 	if configs == nil {
 		log.Fatal("No configuration provided")
 	}
 
-	attachRedirectionHandler(configs)
+	server := http.Server{
+		Addr:    ":8080",
+		Handler: getRedirectionMux(configs),
+	}
 
 	fmt.Println("Starting server...")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := server.ListenAndServe(); err != nil {
 		log.Fatal("Could not start server: ", err)
 	}
 }
 
-func loadConfig() *config.Config {
-	var configs *config.Config
+func loadConfig(ctx context.Context) *config.Config {
 	var file string
 	var url string
 
@@ -54,18 +61,24 @@ func loadConfig() *config.Config {
 			log.Fatal(err)
 		}
 
-		configs, err = config.ConfigFromYaml(yamlFile)
+		configs, err := config.ConfigFromYaml(yamlFile)
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		watchers.WatchConfigFile(ctx, file, configs)
+
+		return configs
 	}
 
 	// given flag overwrites env variable
 	urlEnvValue := os.Getenv(URL_ENV_NAME)
-	if url == "" && urlEnvValue != "" {
-		url = urlEnvValue
-	} else if urlEnvValue != "" {
-		log.Printf("Env variable %s overwritten by provided url flag", URL_ENV_NAME)
+	if urlEnvValue != "" {
+		if url == "" {
+			url = urlEnvValue
+		} else {
+			log.Printf("Env variable %s overwritten by provided url flag", URL_ENV_NAME)
+		}
 	}
 
 	if url != "" {
@@ -82,17 +95,21 @@ func loadConfig() *config.Config {
 
 		res.Body.Close()
 
-		configs, err = config.ConfigFromYaml(body)
+		configs, err := config.ConfigFromYaml(body)
 		if err != nil {
 			log.Fatal(err)
 		}
+
+		return configs
 	}
 
-	return configs
+	return nil
 }
 
-func attachRedirectionHandler(configs *config.Config) {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+func getRedirectionMux(configs *config.Config) http.Handler {
+	handler := http.NewServeMux()
+
+	handler.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		redirectInfo := configs.GetRedirect(r.Host)
 
 		requestPath := path.Join(r.Host, r.URL.Path)
@@ -117,4 +134,6 @@ func attachRedirectionHandler(configs *config.Config) {
 
 		http.Redirect(w, r, redirectPath, http.StatusPermanentRedirect)
 	})
+
+	return handler
 }
