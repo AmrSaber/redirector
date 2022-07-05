@@ -95,8 +95,10 @@ func attachRedirectionHandler(configs *config.Config) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		redirectInfo := configs.GetRedirect(r.Host)
 
+		requestPath := path.Join(r.Host, r.URL.Path)
+
 		if redirectInfo == nil {
-			log.Printf("Received request for unknown host: %s", r.Host)
+			log.Printf("Received request for unknown host: %s", requestPath)
 
 			// No redirects found, report 404
 			w.WriteHeader(http.StatusNotFound)
@@ -111,7 +113,7 @@ func attachRedirectionHandler(configs *config.Config) {
 			redirectPath = path.Join(redirectPath, r.URL.Path)
 		}
 
-		log.Printf("Redirecting %s to %s", path.Join(r.Host, r.URL.Path), redirectPath)
+		log.Printf("Redirecting %s to %s", requestPath, redirectPath)
 
 		http.Redirect(w, r, redirectPath, http.StatusPermanentRedirect)
 	})
