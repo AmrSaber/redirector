@@ -37,8 +37,8 @@ func (c *Config) Validate() error {
 
 	// Validate that each "from" is a valid domain name and each "to" is a valid URL
 	domainRegex := regexp.MustCompile(`^(?:[a-zA-Z0-9-_]+|\*)(?:\.(?:[a-zA-Z0-9-_]+|\*))+(?::\d+)?$`)
-	urlRegex := regexp.MustCompile(`^https?://[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]+)+(?:\/[^/]*)*$`)
-	hasPathRegex := regexp.MustCompile(`https?://.*/?(?:\/[^/]*)+$`)
+	urlRegex := regexp.MustCompile(`^\w+://[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]+)+(?:/[^/]*)*$`)
+	hasPathRegex := regexp.MustCompile(`^.+//.+(?:/[^/]*)+$`)
 
 	for i, r := range c.Redirects {
 		// Trim trailing slash from each domain

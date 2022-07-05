@@ -63,6 +63,18 @@ func TestConfigValidation(t *testing.T) {
 		t.Errorf("unexpected error: %s", err)
 	}
 
+	// Allow domain with port
+	configs = Config{
+		Redirects: []Redirect{
+			{From: "example.com:8080", To: "https://target.com", PreservePath: false},
+		},
+	}
+
+	err = configs.Validate()
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+
 	// Test invalid "from"
 	configs = Config{
 		Redirects: []Redirect{
