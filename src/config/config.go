@@ -36,7 +36,7 @@ func (c *Config) Validate() error {
 	errors := []string{}
 
 	// Validate that each "from" is a valid domain name and each "to" is a valid URL
-	domainRegex := regexp.MustCompile(`^(?:[a-zA-Z0-9-_]+|\*)(?:\.(?:[a-zA-Z0-9-_]+|\*))+$`)
+	domainRegex := regexp.MustCompile(`^(?:[a-zA-Z0-9-_]+|\*)(?:\.(?:[a-zA-Z0-9-_]+|\*))+(?::\d+)?$`)
 	urlRegex := regexp.MustCompile(`^https?://[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]+)+(?:\/[^/]*)*$`)
 	hasPathRegex := regexp.MustCompile(`https?://.*/?(?:\/[^/]*)+$`)
 
