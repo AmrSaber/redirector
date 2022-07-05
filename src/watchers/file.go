@@ -5,15 +5,16 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/AmrSaber/redirector/src/config"
 	"github.com/fsnotify/fsnotify"
 )
 
-func WatchConfigFile(ctx context.Context, filePath string, configs *config.Config) error {
+func WatchConfigFile(ctx context.Context, filePath string) (chan []byte, error) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	fileChan := make(chan []byte)
 
 	go func() {
 		for {
@@ -32,13 +33,7 @@ func WatchConfigFile(ctx context.Context, filePath string, configs *config.Confi
 						continue
 					}
 
-					newConfigs, err := config.ConfigFromYaml(yamlFile)
-					if err != nil {
-						log.Println("Could not parse config file: ", err)
-						continue
-					}
-
-					configs.CopyFrom(newConfigs)
+					fileChan <- yamlFile
 				}
 
 			case err, ok := <-watcher.Errors:
@@ -49,6 +44,8 @@ func WatchConfigFile(ctx context.Context, filePath string, configs *config.Confi
 				log.Println("file watcher error:", err)
 
 			case <-ctx.Done():
+				log.Println("Stopping file watcher...")
+				close(fileChan)
 				watcher.Close()
 				return
 			}
@@ -58,8 +55,8 @@ func WatchConfigFile(ctx context.Context, filePath string, configs *config.Confi
 	err = watcher.Add(filePath)
 	if err != nil {
 		watcher.Close()
-		return err
+		return nil, err
 	}
 
-	return nil
+	return fileChan, nil
 }
