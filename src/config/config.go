@@ -13,9 +13,9 @@ type Config struct {
 }
 
 type Redirect struct {
-	From       string `yaml:"from"`
-	To         string `yaml:"to"`
-	IsWildCard bool   `yaml:"wildcard"`
+	From         string `yaml:"from"`
+	To           string `yaml:"to"`
+	PreservePath bool   `yaml:"preserve-path"`
 }
 
 func ConfigFromYaml(yamlFile []byte) (*Config, error) {
@@ -36,7 +36,7 @@ func (c *Config) Validate() error {
 	errors := []string{}
 
 	// Validate that each "from" is a valid domain name and each "to" is a valid URL
-	domainRegex := regexp.MustCompile(`^[a-zA-Z0-9-_]|\*+(?:\.[a-zA-Z0-9-_]+|\*)+$`)
+	domainRegex := regexp.MustCompile(`^(?:[a-zA-Z0-9-_]+|\*)(?:\.(?:[a-zA-Z0-9-_]+|\*))+$`)
 	urlRegex := regexp.MustCompile(`^https?://[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]+)+(?:\/[^/]*)*$`)
 	hasPathRegex := regexp.MustCompile(`https?://.*/?(?:\/[^/]*)+$`)
 
@@ -53,8 +53,8 @@ func (c *Config) Validate() error {
 			errors = append(errors, fmt.Sprintf(`Invalid "to" URL [#%d]: %s`, i, r.To))
 		}
 
-		if r.IsWildCard && hasPathRegex.MatchString(r.To) {
-			errors = append(errors, fmt.Sprintf(`"To" URL cannot contain path and match wildcard [#%d]: %s`, i, r.To))
+		if r.PreservePath && hasPathRegex.MatchString(r.To) {
+			errors = append(errors, fmt.Sprintf(`"To" URL cannot contain path and set preserve path [#%d]: %s`, i, r.To))
 		}
 	}
 
@@ -76,11 +76,13 @@ func (c *Config) GetRedirect(host string) *Redirect {
 		} else if strings.Contains(r.From, "*") {
 			fromParts := strings.Split(r.From, ".")
 
-			isMatch = true
-			for i, part := range fromParts {
-				if part != "*" && part != hostParts[i] {
-					isMatch = false
-					break
+			if len(fromParts) == len(hostParts) {
+				isMatch = true
+				for i, part := range fromParts {
+					if part != "*" && part != hostParts[i] {
+						isMatch = false
+						break
+					}
 				}
 			}
 		}
