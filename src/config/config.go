@@ -32,6 +32,7 @@ func ConfigFromYaml(yamlFile []byte) (*Config, error) {
 	return &config, nil
 }
 
+// Validates the config
 func (c *Config) Validate() error {
 	errors := []string{}
 
@@ -65,6 +66,7 @@ func (c *Config) Validate() error {
 	}
 }
 
+// Gets the redirection that matches the given domain
 func (c *Config) GetRedirect(host string) *Redirect {
 	hostParts := strings.Split(host, ".")
 
@@ -95,6 +97,12 @@ func (c *Config) GetRedirect(host string) *Redirect {
 	return nil
 }
 
+// Copy configurations from another config
+func (c *Config) CopyFrom(other *Config) {
+	c.Redirects = other.Redirects
+}
+
+// Prints the config as yaml
 func (c Config) String() string {
 	out, _ := yaml.Marshal(c)
 	return string(out)
