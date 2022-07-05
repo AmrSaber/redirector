@@ -6,13 +6,14 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"path"
 
 	"github.com/AmrSaber/redirector/src/config"
 	"github.com/joho/godotenv"
 )
 
-// TODO: Get configuration with redirection rules -- read configuration from (file, URL, environment variable)
+const URL_ENV_NAME = "CONFIG_URL"
 
 func main() {
 	var configs *config.Config
@@ -36,6 +37,14 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+	}
+
+	// given flag overwrites env variable
+	urlEnvValue := os.Getenv(URL_ENV_NAME)
+	if url == "" && urlEnvValue != "" {
+		url = urlEnvValue
+	} else if urlEnvValue != "" {
+		log.Printf("Env variable %s overwritten by provided url flag", URL_ENV_NAME)
 	}
 
 	if url != "" {
@@ -72,15 +81,10 @@ func main() {
 
 func attachRedirectionHandler(configs *config.Config) {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// Print matched path
-		log.Println(r.URL.Path)
-
-		// Print domain
-		log.Println(r.Host)
-
 		redirectInfo := configs.GetRedirect(r.Host)
+
 		if redirectInfo == nil {
-			// Report 404
+			// No redirects found, report 404
 			w.WriteHeader(http.StatusNotFound)
 			w.Header().Add("Content-Type", "application/json")
 			w.Write([]byte(`{ "message": "could not match host to any redirect rule" }`))
