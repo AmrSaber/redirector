@@ -30,12 +30,11 @@ func main() {
 	flag.Parse()
 
 	// given flag overwrites env variable
-	urlEnvValue := os.Getenv(URL_ENV_NAME)
-	if urlEnvValue != "" {
+	if urlEnvValue := os.Getenv(URL_ENV_NAME); urlEnvValue != "" {
 		if url == "" {
 			url = urlEnvValue
 		} else {
-			logger.Std.Printf("Env variable %s overwritten by provided url flag", URL_ENV_NAME)
+			logger.Std.Printf("Effect of env variable %s overwritten by provided url flag", URL_ENV_NAME)
 		}
 	}
 
