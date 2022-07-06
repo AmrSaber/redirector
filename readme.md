@@ -108,6 +108,10 @@ redirects:
 
 In case the request comes from a domain that matches several redirection rules, redirector will redirect to the first exact match if it's found, otherwise, it will redirect ot the first match with wildcard.
 
+## Logging
+
+Redirector logs different events (like starting server, configuration parsing and update, received requests) to STDOUT, and logs errors and warnings to STDERR.
+
 ## Bugs and Feature Requests
 
 If you find any bug, or want to request any feature, feel free to [open a ticket](https://github.com/AmrSaber/redirector/issues).
