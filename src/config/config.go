@@ -95,7 +95,7 @@ func (c *Config) Validate() error {
 	errors := []string{}
 
 	// Validate that each "from" is a valid domain name and each "to" is a valid URL
-	domainRegex := regexp.MustCompile(`^(?:[a-zA-Z0-9-_]+|\*)(?:\.(?:[a-zA-Z0-9-_]+|\*))+(?::\d+)?$`)
+	domainRegex := regexp.MustCompile(`^(?:[a-zA-Z0-9-_]+|\*)(?:\.(?:[a-zA-Z0-9-_]+|\*))+$`)
 	urlRegex := regexp.MustCompile(`^\w+://[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]+)+(?:/[^/]*)*$`)
 	hasPathRegex := regexp.MustCompile(`^.+//.+(?:/[^/]*)+$`)
 
@@ -135,26 +135,37 @@ func (c *Config) GetRedirect(host string) *Redirect {
 		}
 	}
 
-	domainSplit := func(r rune) bool { return r == '.' || r == ':' }
+	// Remove port from host if it's present
+	host = regexp.MustCompile(`(:\d+)?$`).ReplaceAllString(host, "")
+	hostParts := strings.Split(host, ".")
 
-	hostParts := strings.FieldsFunc(host, domainSplit)
-
+	// Try to find exact match
 	for _, r := range c.Redirects {
-		isMatch := false
-
 		if r.From == host {
-			isMatch = true
-		} else if strings.Contains(r.From, "*") {
-			fromParts := strings.FieldsFunc(r.From, domainSplit)
+			return &r
+		}
+	}
 
-			if len(fromParts) == len(hostParts) {
-				isMatch = true
-				for i, part := range fromParts {
-					if part != "*" && part != hostParts[i] {
-						isMatch = false
-						break
-					}
-				}
+	// Try to find wildcard match
+	for _, r := range c.Redirects {
+		if !strings.Contains(r.From, "*") {
+			continue
+		}
+
+		fromParts := strings.Split(r.From, ".")
+		if len(fromParts) != len(hostParts) {
+			continue
+		}
+
+		isMatch := true
+		for i, part := range fromParts {
+			if part == "*" {
+				continue
+			}
+
+			if part != hostParts[i] {
+				isMatch = false
+				break
 			}
 		}
 
