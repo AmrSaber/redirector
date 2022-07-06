@@ -1,6 +1,10 @@
 # Redirector
 
-Simple, light weight, configurable, special-purpose reverse proxy for handling redirection based on domain name, written in GO.
+Simple, light weight, configurable, special-purpose reverse proxy for handling redirection based on domain name, written in Go.
+
+Redirector enables you to redirect your traffic from a given domain to a URL (or domain) using simple configuration. You can configure whether or not you want the redirection to be permanent (for browser caching) and whether or not to preserve the path after redirection.
+
+Redirector also watches the configuration file for updates, so you do not need to restart the application on each configuration update (see [configuration watching](#configuration-watching) section below).
 
 ## Install
 
@@ -50,9 +54,13 @@ The application will print the final form of the parsed configuration after pars
 
 To only print the parsed configuration provide the flag `--dry-run`, e.g. `redirector --file config.yaml --dry-run`.
 
+In case you provide more that 1 source, the precedence is as follows: stdin, file, url, env variable.
+
+#### Configuration Watching
+
 In case of providing the configuration from a file, the application will attempt to watch the file for changes and update the configuration automatically with after each change, if the file became invalid after an update, the application will keep the last valid parsed configuration.
 
-In case of providing the configuration from a URL (using `--url` flag or the env variable), the application will attempt to refresh the configuration from the URL after `cache-ttl` time specified in the configuration file. If the application fails to refresh after the specified cache-ttl time (for invalid config format for example, or network problem) it will keep the last valid parsed configuration and attempt to refresh with each new request.
+In case of providing the configuration from a URL (using `--url` flag or the env variable), the application will attempt to refresh the configuration from the URL after `cache-ttl` time specified in the configuration file. If the application fails to refresh after the specified cache-ttl time (invalid config format, network problem, etc...) it will keep the last valid parsed configuration and attempt to refresh with each new request.
 
 ### Configuration File
 
@@ -77,7 +85,7 @@ temp-redirect: true
 # The list of redirection rules
 redirects:
   - # Will redirect traffic from this domain
-    # You can use * in place of domain parts, e.g. *.amr-saber.io, *.*.io, *.amr-saber.*, *.*.* will all match (subdomain.amr-saber.io)
+    # You can use * in place of domain sections, e.g. *.amr-saber.io, *.*.io, *.amr-saber.*, *.*.* will all match (subdomain.amr-saber.io)
     # Required field, and must not contain protocol or ports
     from: subdomain.amr-saber.io
 
@@ -95,6 +103,10 @@ redirects:
     # Default: same value as global `temp-redirect` field
     temp-redirect: true
 ```
+
+### Redirection Notes
+
+In case the request comes from a domain that matches several redirection rules, redirector will redirect to the first exact match if it's found, otherwise, it will redirect ot the first match with wildcard.
 
 ## Bugs and Feature Requests
 
