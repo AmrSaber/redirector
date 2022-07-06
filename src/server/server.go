@@ -54,7 +54,12 @@ func getRedirectionMux(configs *config.Config) http.Handler {
 
 		logger.Std.Printf("Redirecting %q to %q", requestPath, redirectPath)
 
-		http.Redirect(w, r, redirectPath, http.StatusPermanentRedirect)
+		status := http.StatusPermanentRedirect
+		if *redirectInfo.TempRedirect {
+			status = http.StatusTemporaryRedirect
+		}
+
+		http.Redirect(w, r, redirectPath, status)
 	})
 
 	return handler

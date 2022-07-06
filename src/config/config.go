@@ -21,10 +21,12 @@ type Config struct {
 	Source    string `yaml:"source"`
 	ConfigURI string `yaml:"config-uri"`
 
+	Port int `yaml:"port"`
+
 	CacheTTL time.Duration `yaml:"cache-ttl"`
 	LoadedAt time.Time     `yaml:"loaded-at"`
 
-	Port int `yaml:"port"`
+	TempRedirect bool `yaml:"temp-redirect"`
 
 	Redirects []Redirect `yaml:"redirects"`
 }
@@ -33,6 +35,7 @@ type Redirect struct {
 	From         string `yaml:"from"`
 	To           string `yaml:"to"`
 	PreservePath bool   `yaml:"preserve-path"`
+	TempRedirect *bool  `yaml:"temp-redirect"`
 }
 
 func NewConfig(source, uri string) *Config {
@@ -85,6 +88,12 @@ func (c *Config) Load() error {
 
 	if c.Port == 0 {
 		c.Port = 8080
+	}
+
+	for i, r := range c.Redirects {
+		if r.TempRedirect == nil {
+			c.Redirects[i].TempRedirect = &c.TempRedirect
+		}
 	}
 
 	return nil
@@ -179,8 +188,10 @@ func (c *Config) GetRedirect(host string) *Redirect {
 
 // Copy configurations from another config
 func (c *Config) CopyFrom(other *Config) {
-	c.CacheTTL = other.CacheTTL
 	c.Port = other.Port
+	c.CacheTTL = other.CacheTTL
+	c.TempRedirect = other.TempRedirect
+
 	c.Redirects = other.Redirects
 }
 
