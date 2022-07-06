@@ -3,14 +3,13 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 
 	"github.com/AmrSaber/redirector/src/config"
+	"github.com/AmrSaber/redirector/src/logger"
 	"github.com/AmrSaber/redirector/src/server"
 	"github.com/joho/godotenv"
 )
@@ -36,16 +35,16 @@ func main() {
 		if url == "" {
 			url = urlEnvValue
 		} else {
-			log.Printf("Env variable %s overwritten by provided url flag", URL_ENV_NAME)
+			logger.Std.Printf("Env variable %s overwritten by provided url flag", URL_ENV_NAME)
 		}
 	}
 
 	configs := config.LoadConfig(ctx, filePath, url)
 	if configs == nil {
-		log.Fatal("No configuration provided!")
+		logger.Err.Fatal("No configuration provided!")
 	}
 
-	log.Printf("Parsed configurations:\n\n%s\n", configs)
+	logger.Std.Printf("Parsed configurations:\n\n%s\n", configs)
 
 	server := server.SetupServer(ctx, configs)
 
@@ -56,9 +55,9 @@ func main() {
 	go func() {
 		defer wg.Done()
 
-		fmt.Println("Starting server...")
+		logger.Std.Println("Starting server...")
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatal("Could not start server: ", err)
+			logger.Err.Fatal("Could not start server: ", err)
 		}
 	}()
 

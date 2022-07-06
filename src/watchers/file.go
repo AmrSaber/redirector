@@ -2,8 +2,8 @@ package watchers
 
 import (
 	"context"
-	"log"
 
+	"github.com/AmrSaber/redirector/src/logger"
 	"github.com/fsnotify/fsnotify"
 )
 
@@ -32,10 +32,10 @@ func WatchConfigFile(ctx context.Context, filePath string) (<-chan any, error) {
 					return
 				}
 
-				log.Println("file watcher error:", err)
+				logger.Err.Println("file watcher error:", err)
 
 			case <-ctx.Done():
-				log.Println("Stopping file watcher...")
+				logger.Std.Println("Stopping file watcher...")
 				close(updateChan)
 				watcher.Close()
 				return

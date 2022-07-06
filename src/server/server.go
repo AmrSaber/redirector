@@ -3,11 +3,11 @@ package server
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"path"
 
 	"github.com/AmrSaber/redirector/src/config"
+	"github.com/AmrSaber/redirector/src/logger"
 )
 
 func SetupServer(ctx context.Context, configs *config.Config) *http.Server {
@@ -20,9 +20,9 @@ func SetupServer(ctx context.Context, configs *config.Config) *http.Server {
 	go func() {
 		<-ctx.Done()
 
-		log.Println("Stopping server...")
+		logger.Std.Println("Stopping server...")
 		server.Shutdown(context.Background())
-		log.Println("Server stopped")
+		logger.Std.Println("Server stopped")
 	}()
 
 	return &server
@@ -37,7 +37,7 @@ func getRedirectionMux(configs *config.Config) http.Handler {
 		requestPath := path.Join(r.Host, r.URL.Path)
 
 		if redirectInfo == nil {
-			log.Printf("Received request for unknown host: %s", requestPath)
+			logger.Std.Printf("Received request for unknown host: %s", requestPath)
 
 			// No redirects found, report 404
 			w.WriteHeader(http.StatusNotFound)
@@ -52,7 +52,7 @@ func getRedirectionMux(configs *config.Config) http.Handler {
 			redirectPath = path.Join(redirectPath, r.URL.Path)
 		}
 
-		log.Printf("Redirecting %q to %q", requestPath, redirectPath)
+		logger.Std.Printf("Redirecting %q to %q", requestPath, redirectPath)
 
 		http.Redirect(w, r, redirectPath, http.StatusPermanentRedirect)
 	})

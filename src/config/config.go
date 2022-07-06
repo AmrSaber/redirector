@@ -3,12 +3,12 @@ package config
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/AmrSaber/redirector/src/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -129,9 +129,9 @@ func (c *Config) GetRedirect(host string) *Redirect {
 	// Refresh the config if it's stale
 	if c.Source == SOURCE_URL && time.Since(c.LoadedAt) >= c.CacheTTL {
 		if err := c.Load(); err != nil {
-			log.Printf("Could not refresh config from URL: %s", err)
+			logger.Err.Printf("Could not refresh config from URL: %s", err)
 		} else {
-			log.Printf("Refreshed config from URL, new config:\n\n%s\n", c)
+			logger.Std.Printf("Refreshed config from URL, new config:\n\n%s\n", c)
 		}
 	}
 
