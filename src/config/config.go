@@ -13,16 +13,18 @@ import (
 )
 
 const (
-	SOURCE_FILE = "source-file"
-	SOURCE_URL  = "source-url"
+	SOURCE_FILE = "@source:file"
+	SOURCE_URL  = "@source:url"
 )
 
 type Config struct {
-	source    string `yaml:"-"`
-	configURI string `yaml:"-"`
+	Source    string `yaml:"source"`
+	ConfigURI string `yaml:"config-uri"`
 
 	CacheTTL time.Duration `yaml:"cache-ttl"`
-	LoadedAt time.Time     `yaml:"-"`
+	LoadedAt time.Time     `yaml:"loaded-at"`
+
+	Port int `yaml:"port"`
 
 	Redirects []Redirect `yaml:"redirects"`
 }
@@ -35,8 +37,8 @@ type Redirect struct {
 
 func NewConfig(source, uri string) *Config {
 	return &Config{
-		source:    source,
-		configURI: uri,
+		Source:    source,
+		ConfigURI: uri,
 	}
 }
 
@@ -44,15 +46,15 @@ func (c *Config) Load() error {
 	var yamlBody []byte
 	var err error
 
-	switch c.source {
+	switch c.Source {
 	case SOURCE_FILE:
-		yamlBody, err = ioutil.ReadFile(c.configURI)
+		yamlBody, err = ioutil.ReadFile(c.ConfigURI)
 		if err != nil {
 			return err
 		}
 
 	case SOURCE_URL:
-		res, err := http.Get(c.configURI)
+		res, err := http.Get(c.ConfigURI)
 		if err != nil {
 			return nil
 		}
@@ -74,12 +76,16 @@ func (c *Config) Load() error {
 		return fmt.Errorf("invalid configurations:\n%s", err)
 	}
 
+	c.CopyFrom(&parsedConfig)
+	c.LoadedAt = time.Now()
+
 	if c.CacheTTL == 0 {
 		c.CacheTTL, _ = time.ParseDuration("4h")
 	}
 
-	c.CopyFrom(&parsedConfig)
-	c.LoadedAt = time.Now()
+	if c.Port == 0 {
+		c.Port = 8080
+	}
 
 	return nil
 }
@@ -121,13 +127,17 @@ func (c *Config) Validate() error {
 // Gets the redirection that matches the given domain
 func (c *Config) GetRedirect(host string) *Redirect {
 	// Refresh the config if it's stale
-	if c.source == SOURCE_URL && time.Since(c.LoadedAt) >= c.CacheTTL {
+	if c.Source == SOURCE_URL && time.Since(c.LoadedAt) >= c.CacheTTL {
 		if err := c.Load(); err != nil {
 			log.Printf("Could not refresh config from URL: %s", err)
+		} else {
+			log.Printf("Refreshed config from URL, new config:\n\n%s\n", c)
 		}
 	}
 
-	hostParts := strings.Split(host, ".")
+	domainSplit := func(r rune) bool { return r == '.' || r == ':' }
+
+	hostParts := strings.FieldsFunc(host, domainSplit)
 
 	for _, r := range c.Redirects {
 		isMatch := false
@@ -135,7 +145,7 @@ func (c *Config) GetRedirect(host string) *Redirect {
 		if r.From == host {
 			isMatch = true
 		} else if strings.Contains(r.From, "*") {
-			fromParts := strings.Split(r.From, ".")
+			fromParts := strings.FieldsFunc(r.From, domainSplit)
 
 			if len(fromParts) == len(hostParts) {
 				isMatch = true
@@ -159,6 +169,7 @@ func (c *Config) GetRedirect(host string) *Redirect {
 // Copy configurations from another config
 func (c *Config) CopyFrom(other *Config) {
 	c.CacheTTL = other.CacheTTL
+	c.Port = other.Port
 	c.Redirects = other.Redirects
 }
 

@@ -150,4 +150,21 @@ func TestConfigDomainMatching(t *testing.T) {
 	if exact != nil && exact.To != configs.Redirects[0].To {
 		t.Errorf("expected %s, got %s", configs.Redirects[0].To, exact.To)
 	}
+
+	// Test matching with wildcard port
+	configs = Config{
+		Redirects: []Redirect{
+			{From: "a.example.com:3000", To: "https://target-1.com", PreservePath: true},
+			{From: "a.example.com:*", To: "https://target-2.com", PreservePath: true},
+		},
+	}
+
+	match := configs.GetRedirect("a.example.com:8080")
+	if match == nil {
+		t.Errorf("expected redirect, got nil")
+	}
+
+	if match != nil && match.To != configs.Redirects[1].To {
+		t.Errorf("expected %s, got %s", configs.Redirects[1].To, match.To)
+	}
 }

@@ -15,11 +15,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// TODO:
-// 3. Add tests to github actions workflow
-// 4. Dockerize the app
-// 5. Add github actions workflow to auto-publish docker image on github
-
 const URL_ENV_NAME = "CONFIG_URL"
 
 func main() {
@@ -49,6 +44,8 @@ func main() {
 	if configs == nil {
 		log.Fatal("No configuration provided!")
 	}
+
+	log.Printf("Parsed configurations:\n\n%s\n", configs)
 
 	server := server.SetupServer(ctx, configs)
 

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"path"
@@ -11,7 +12,7 @@ import (
 
 func SetupServer(ctx context.Context, configs *config.Config) *http.Server {
 	server := http.Server{
-		Addr:    ":8080",
+		Addr:    fmt.Sprintf(":%d", configs.Port),
 		Handler: getRedirectionMux(configs),
 	}
 
@@ -41,7 +42,7 @@ func getRedirectionMux(configs *config.Config) http.Handler {
 			// No redirects found, report 404
 			w.WriteHeader(http.StatusNotFound)
 			w.Header().Add("Content-Type", "application/json")
-			w.Write([]byte(`{ "message": "could not match host to any redirect rule" }`))
+			w.Write([]byte(`{ "message": "could not match host to any redirection rule" }`))
 			return
 		}
 
@@ -51,7 +52,7 @@ func getRedirectionMux(configs *config.Config) http.Handler {
 			redirectPath = path.Join(redirectPath, r.URL.Path)
 		}
 
-		log.Printf("Redirecting %s to %s", requestPath, redirectPath)
+		log.Printf("Redirecting %q to %q", requestPath, redirectPath)
 
 		http.Redirect(w, r, redirectPath, http.StatusPermanentRedirect)
 	})
