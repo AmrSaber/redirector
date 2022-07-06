@@ -1,0 +1,23 @@
+# Template from: https://goreleaser.com/customization/build/
+builds:
+  - main: ./src/main.go
+
+    # GOOS list to build for.
+    # For more info refer to: https://golang.org/doc/install/source#environment
+    goos:
+      - linux
+      - darwin
+      - windows
+
+    # GOARCH to build for.
+    # For more info refer to: https://golang.org/doc/install/source#environment
+    goarch:
+      - amd64
+      - arm
+      - arm64
+      - '386'
+
+archives:
+  - format: binary
+    replacements:
+      darwin: macOS

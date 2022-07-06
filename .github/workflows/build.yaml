@@ -28,7 +28,7 @@ jobs:
             ${{ runner.os }}-go-
 
       - name: Install dependencies
-        run: go mod tidy
+        run: go mod download
 
       - name: Docker Login
         uses: docker/login-action@v1
