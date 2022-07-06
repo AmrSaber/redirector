@@ -7,12 +7,23 @@ import (
 	"github.com/AmrSaber/redirector/src/watchers"
 )
 
-func LoadConfig(ctx context.Context, filePath, url string) *Config {
+func LoadConfig(ctx context.Context, readStdin bool, filePath, url string) *Config {
+	if readStdin {
+		configs := NewConfig(SOURCE_STDIN, "")
+
+		if err := configs.Load(); err != nil {
+			logger.Err.Fatal("Could not load config", err)
+		}
+
+		return configs
+	}
+
 	if filePath != "" {
+
 		configs := NewConfig(SOURCE_FILE, filePath)
 
 		if err := configs.Load(); err != nil {
-			logger.Err.Fatal("Could not load config file", err)
+			logger.Err.Fatal("Could not load config", err)
 		}
 
 		// Watch config file for updates

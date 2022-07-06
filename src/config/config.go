@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -13,8 +14,9 @@ import (
 )
 
 const (
-	SOURCE_FILE = "@source:file"
-	SOURCE_URL  = "@source:url"
+	SOURCE_STDIN = "@source:stdin"
+	SOURCE_FILE  = "@source:file"
+	SOURCE_URL   = "@source:url"
 )
 
 type Config struct {
@@ -50,6 +52,12 @@ func (c *Config) Load() error {
 	var err error
 
 	switch c.Source {
+	case SOURCE_STDIN:
+		yamlBody, err = ioutil.ReadAll(os.Stdin)
+		if err != nil {
+			return err
+		}
+
 	case SOURCE_FILE:
 		yamlBody, err = ioutil.ReadFile(c.ConfigURI)
 		if err != nil {

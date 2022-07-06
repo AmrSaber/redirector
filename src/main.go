@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,9 +23,10 @@ func main() {
 
 	godotenv.Load()
 
-	var filePath string
-	var url string
+	var filePath, url string
+	var readStdin bool
 
+	flag.BoolVar(&readStdin, "stdin", false, "Read configuration from stdin")
 	flag.StringVar(&filePath, "file", "", "YAML file containing configuration")
 	flag.StringVar(&url, "url", "", "URL containing configuration yaml file")
 	flag.Parse()
@@ -38,7 +40,9 @@ func main() {
 		}
 	}
 
-	configs := config.LoadConfig(ctx, filePath, url)
+	fmt.Printf("std: %v\nfile: %v\nurl: %v\n", readStdin, filePath, url)
+
+	configs := config.LoadConfig(ctx, readStdin, filePath, url)
 	if configs == nil {
 		logger.Err.Fatal("No configuration provided!")
 	}
