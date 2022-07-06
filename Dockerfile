@@ -9,7 +9,7 @@ RUN go mod download
 
 COPY ./ ./
 
-RUN go build -o /redirector main.go
+RUN go build -o /redirector src/main.go
 
 
 # Deploy stage
