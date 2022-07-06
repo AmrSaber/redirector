@@ -1,4 +1,6 @@
 # Template from: https://goreleaser.com/customization/build/
+project_name: redirector
+
 builds:
   - main: ./src/main.go
 
@@ -24,8 +26,9 @@ archives:
       darwin: macOS
 
 dockers:
-  - image_templates:
-      - 'ghcr.io/amrsaber/redirector:{{ .Tag }}'
-      - 'ghcr.io/amrsaber/redirector:v{{ .Major }}'
-      - 'ghcr.io/amrsaber/redirector:v{{ .Major }}.{{ .Minor }}'
-      - 'ghcr.io/amrsaber/redirector:latest'
+  - dockerfile: goreleaser.dockerfile
+    image_templates:
+      - 'ghcr.io/amrsaber/{{ .ProjectName }}:{{ .Tag }}'
+      - 'ghcr.io/amrsaber/{{ .ProjectName }}:v{{ .Major }}'
+      - 'ghcr.io/amrsaber/{{ .ProjectName }}:v{{ .Major }}.{{ .Minor }}'
+      - 'ghcr.io/amrsaber/{{ .ProjectName }}:latest'
