@@ -6,6 +6,6 @@ import (
 )
 
 var (
-	Std = log.New(os.Stdout, "", log.LstdFlags|log.Lshortfile)
+	Std = log.New(os.Stdout, "", log.LstdFlags)
 	Err = log.New(os.Stderr, "error: ", log.LstdFlags|log.Lshortfile)
 )
