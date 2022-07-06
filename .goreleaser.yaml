@@ -19,6 +19,12 @@ builds:
       - arm64
       - '386'
 
+    goarm:
+      - '7'
+
+    goamd64:
+      - v2
+
 archives:
   - format: binary
     name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}'
