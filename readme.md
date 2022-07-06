@@ -25,7 +25,7 @@ chmod +x redirector
 
 ### Docker Image
 
-You can use the application's docker image `ghcr.io/amrsaber/redirector` You can also download a specific version with image tag, available tags can be found [here]().
+You can use the application's docker image `ghcr.io/amrsaber/redirector` You can also download a specific version with image tag, available tags can be found [here](https://github.com/AmrSaber/redirector/pkgs/container/redirector).
 
 For example
 
