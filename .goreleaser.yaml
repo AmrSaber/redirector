@@ -27,6 +27,8 @@ archives:
 
 dockers:
   - dockerfile: goreleaser.dockerfile
+    goos: linux
+    goarch: amd64
     image_templates:
       - 'ghcr.io/amrsaber/{{ .ProjectName }}:{{ .Tag }}'
       - 'ghcr.io/amrsaber/{{ .ProjectName }}:v{{ .Major }}'
