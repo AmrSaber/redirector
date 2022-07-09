@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AmrSaber/redirector/src/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -38,11 +37,14 @@ type UrlRefreshOptions struct {
 	// How often to refresh the URL
 	CacheTTL time.Duration `yaml:"cache-ttl"`
 
-	// Whether to refresh on domain hit
+	// Whether or not to refresh on domain hit
 	RefreshOnHit bool `yaml:"refresh-on-hit"`
 
-	// Whether to refresh on domain miss (domain not found)
+	// Whether or not to refresh on domain miss (domain not found)
 	RefreshOnMiss bool `yaml:"refresh-on-miss"`
+
+	// Whether or not to retry after refreshing
+	RetryAfterRefresh bool `yaml:"retry-after-refresh"`
 
 	// Domains to refresh on
 	RefreshDomains []RefreshDomain `yaml:"refresh-domains"`
@@ -174,50 +176,22 @@ func (c *Config) Validate() error {
 }
 
 // Gets the redirection that matches the given domain
-func (c *Config) GetRedirect(host string) *Redirect {
+func (c *Config) GetRedirect(domain string) *Redirect {
 	// Refresh the config if it's stale
 	if c.Source == SOURCE_URL && time.Since(c.LoadedAt) >= c.UrlConfigRefresh.CacheTTL {
-		refreshConfig(c)
+		reloadConfig(c)
 	}
 
-	matchedRedirect := matchDomain(host, c.Redirects, func(r Redirect) string { return r.From })
+	matchedRedirect := matchDomain(domain, c.Redirects, func(r Redirect) string { return r.From })
 
 	// Perform a refresh in the background if it's needed
-	go func() {
-		if c.Source != SOURCE_URL {
-			return
+	if c.UrlConfigRefresh.RetryAfterRefresh {
+		if refreshed := refreshConfig(c, domain); refreshed {
+			matchedRedirect = matchDomain(domain, c.Redirects, func(r Redirect) string { return r.From })
 		}
-
-		matchedRefreshDomain := matchDomain(host, c.UrlConfigRefresh.RefreshDomains, func(d RefreshDomain) string { return d.Domain })
-
-		if matchedRefreshDomain != nil {
-			if matchedRefreshDomain.RefreshOn == "hit" && matchedRedirect != nil {
-				logger.Std.Printf("Refreshing config due to match with refresh domain %q and a redirect was found", matchedRefreshDomain.Domain)
-				refreshConfig(c)
-				return
-			}
-
-			if matchedRefreshDomain.RefreshOn == "miss" && matchedRedirect == nil {
-				logger.Std.Printf("Refreshing config due to match with refresh domain %q and no redirect was found", matchedRefreshDomain.Domain)
-				refreshConfig(c)
-				return
-			}
-		}
-
-		// Refresh config if refresh-on-hit is set and a redirect was found
-		if c.UrlConfigRefresh.RefreshOnHit && matchedRedirect != nil {
-			logger.Std.Printf("Refreshing config due to refresh-on-hit and a redirect was found")
-			refreshConfig(c)
-			return
-		}
-
-		// Refresh config if refresh-on-miss is set and no redirect was found
-		if c.UrlConfigRefresh.RefreshOnMiss && matchedRedirect == nil {
-			logger.Std.Printf("Refreshing config due to refresh-on-miss and no redirect was found")
-			refreshConfig(c)
-			return
-		}
-	}()
+	} else {
+		go refreshConfig(c, domain)
+	}
 
 	return matchedRedirect
 }
