@@ -20,17 +20,38 @@ const (
 )
 
 type Config struct {
-	Source    string `yaml:"source"`
-	ConfigURI string `yaml:"config-uri"`
+	Source    string    `yaml:"source"`
+	ConfigURI string    `yaml:"config-uri"`
+	LoadedAt  time.Time `yaml:"loaded-at"`
 
 	Port int `yaml:"port"`
 
-	CacheTTL time.Duration `yaml:"cache-ttl"`
-	LoadedAt time.Time     `yaml:"loaded-at"`
-
 	TempRedirect bool `yaml:"temp-redirect"`
 
+	UrlConfigRefresh UrlRefreshOptions `yaml:"url-config-refresh"`
+
 	Redirects []Redirect `yaml:"redirects"`
+}
+
+type UrlRefreshOptions struct {
+	// How often to refresh the URL
+	CacheTTL time.Duration `yaml:"cache-ttl"`
+
+	// Whether to refresh on domain hit
+	RefreshOnHit bool `yaml:"refresh-on-hit"`
+
+	// Whether to refresh on domain miss (domain not found)
+	RefreshOnMiss bool `yaml:"refresh-on-miss"`
+
+	// Domains to refresh on
+	RefreshDomains []RefreshDomain `yaml:"refresh-domains"`
+}
+
+type RefreshDomain struct {
+	Domain string `yaml:"domain"`
+
+	// Whether to refresh on domain hit or miss
+	RefreshOn string `yaml:"refresh-on"`
 }
 
 type Redirect struct {
@@ -90,8 +111,8 @@ func (c *Config) Load() error {
 	c.CopyFrom(&parsedConfig)
 	c.LoadedAt = time.Now()
 
-	if c.CacheTTL == 0 {
-		c.CacheTTL, _ = time.ParseDuration("4h")
+	if c.UrlConfigRefresh.CacheTTL == 0 {
+		c.UrlConfigRefresh.CacheTTL, _ = time.ParseDuration("4h")
 	}
 
 	if c.Port == 0 {
@@ -144,7 +165,7 @@ func (c *Config) Validate() error {
 // Gets the redirection that matches the given domain
 func (c *Config) GetRedirect(host string) *Redirect {
 	// Refresh the config if it's stale
-	if c.Source == SOURCE_URL && time.Since(c.LoadedAt) >= c.CacheTTL {
+	if c.Source == SOURCE_URL && time.Since(c.LoadedAt) >= c.UrlConfigRefresh.CacheTTL {
 		if err := c.Load(); err != nil {
 			logger.Err.Printf("Could not refresh config from URL: %s", err)
 		} else {
@@ -197,9 +218,9 @@ func (c *Config) GetRedirect(host string) *Redirect {
 // Copy configurations from another config
 func (c *Config) CopyFrom(other *Config) {
 	c.Port = other.Port
-	c.CacheTTL = other.CacheTTL
 	c.TempRedirect = other.TempRedirect
 
+	c.UrlConfigRefresh = other.UrlConfigRefresh
 	c.Redirects = other.Redirects
 }
 
