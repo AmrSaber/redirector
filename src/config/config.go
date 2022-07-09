@@ -177,11 +177,7 @@ func (c *Config) Validate() error {
 func (c *Config) GetRedirect(host string) *Redirect {
 	// Refresh the config if it's stale
 	if c.Source == SOURCE_URL && time.Since(c.LoadedAt) >= c.UrlConfigRefresh.CacheTTL {
-		if err := c.Load(); err != nil {
-			logger.Err.Printf("Could not refresh config from URL: %s", err)
-		} else {
-			logger.Std.Printf("Refreshed config from URL, new config:\n\n%s\n", c)
-		}
+		refreshConfig(c)
 	}
 
 	matchedRedirect := matchDomain(host, c.Redirects, func(r Redirect) string { return r.From })
@@ -197,19 +193,13 @@ func (c *Config) GetRedirect(host string) *Redirect {
 		if matchedRefreshDomain != nil {
 			if matchedRefreshDomain.RefreshOn == "hit" && matchedRedirect != nil {
 				logger.Std.Printf("Refreshing config due to match with refresh domain %q and a redirect was found", matchedRefreshDomain.Domain)
-				if err := c.Load(); err != nil {
-					logger.Err.Printf("Could not refresh config from URL: %s", err)
-				}
-
+				refreshConfig(c)
 				return
 			}
 
 			if matchedRefreshDomain.RefreshOn == "miss" && matchedRedirect == nil {
 				logger.Std.Printf("Refreshing config due to match with refresh domain %q and no redirect was found", matchedRefreshDomain.Domain)
-				if err := c.Load(); err != nil {
-					logger.Err.Printf("Could not refresh config from URL: %s", err)
-				}
-
+				refreshConfig(c)
 				return
 			}
 		}
@@ -217,20 +207,14 @@ func (c *Config) GetRedirect(host string) *Redirect {
 		// Refresh config if refresh-on-hit is set and a redirect was found
 		if c.UrlConfigRefresh.RefreshOnHit && matchedRedirect != nil {
 			logger.Std.Printf("Refreshing config due to refresh-on-hit and a redirect was found")
-			if err := c.Load(); err != nil {
-				logger.Err.Printf("Could not refresh config from URL: %s", err)
-			}
-
+			refreshConfig(c)
 			return
 		}
 
 		// Refresh config if refresh-on-miss is set and no redirect was found
 		if c.UrlConfigRefresh.RefreshOnMiss && matchedRedirect == nil {
 			logger.Std.Printf("Refreshing config due to refresh-on-miss and no redirect was found")
-			if err := c.Load(); err != nil {
-				logger.Err.Printf("Could not refresh config from URL: %s", err)
-			}
-
+			refreshConfig(c)
 			return
 		}
 	}()

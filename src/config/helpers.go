@@ -3,6 +3,8 @@ package config
 import (
 	"regexp"
 	"strings"
+
+	"github.com/AmrSaber/redirector/src/logger"
 )
 
 // Returns a pointer to the element of the list that matched the domain after mapping it with the given mapper
@@ -46,4 +48,12 @@ func matchDomain[T any](domain string, list []T, mapper func(T) string) *T {
 	}
 
 	return nil
+}
+
+func refreshConfig(c *Config) {
+	if err := c.Load(); err != nil {
+		logger.Err.Printf("Could not refresh config from URL: %s", err)
+	} else {
+		logger.Std.Printf("Refreshed config from URL, new config:\n\n%s\n", c)
+	}
 }
