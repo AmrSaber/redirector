@@ -43,8 +43,8 @@ type UrlRefreshOptions struct {
 	// Whether or not to refresh on domain miss (domain not found)
 	RefreshOnMiss bool `yaml:"refresh-on-miss"`
 
-	// Whether or not to retry after refreshing
-	RetryAfterRefresh bool `yaml:"retry-after-refresh"`
+	// Whether or not to remap the request after refreshing
+	RemapAfterRefresh bool `yaml:"remap-after-refresh"`
 
 	// Domains to refresh on
 	RefreshDomains []RefreshDomain `yaml:"refresh-domains"`
@@ -185,7 +185,7 @@ func (c *Config) GetRedirect(domain string) *Redirect {
 	matchedRedirect := matchDomain(domain, c.Redirects, func(r Redirect) string { return r.From })
 
 	// Perform a refresh in the background if it's needed
-	if c.UrlConfigRefresh.RetryAfterRefresh {
+	if c.UrlConfigRefresh.RemapAfterRefresh {
 		if refreshed := refreshConfig(c, domain); refreshed {
 			matchedRedirect = matchDomain(domain, c.Redirects, func(r Redirect) string { return r.From })
 		}

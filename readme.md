@@ -81,7 +81,7 @@ url-config-refresh:
 
   # Whether to re-perform the mapping (from received request to target url) again after refresh
   # Default: false
-  retry-after-refresh: true
+  remap-after-refresh: true
 
   # A list of domains to refresh when there is redirect miss/hit
   # Any matching domain from this list, will overwrite refresh-on-hit and refresh-on-miss options
