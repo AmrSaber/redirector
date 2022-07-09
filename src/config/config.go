@@ -33,6 +33,7 @@ type Config struct {
 	Redirects []Redirect `yaml:"redirects"`
 }
 
+// TODO: figure out a way to test the execution of these options
 type UrlRefreshOptions struct {
 	// How often to refresh the URL
 	CacheTTL time.Duration `yaml:"cache-ttl"`
@@ -183,46 +184,58 @@ func (c *Config) GetRedirect(host string) *Redirect {
 		}
 	}
 
-	// Remove port from host if it's present
-	host = regexp.MustCompile(`(:\d+)?$`).ReplaceAllString(host, "")
-	hostParts := strings.Split(host, ".")
+	matchedRedirect := matchDomain(host, c.Redirects, func(r Redirect) string { return r.From })
 
-	// Try to find exact match
-	for _, r := range c.Redirects {
-		if r.From == host {
-			return &r
-		}
-	}
-
-	// Try to find wildcard match
-	for _, r := range c.Redirects {
-		if !strings.Contains(r.From, "*") {
-			continue
+	// Perform a refresh in the background if it's needed
+	go func() {
+		if c.Source != SOURCE_URL {
+			return
 		}
 
-		fromParts := strings.Split(r.From, ".")
-		if len(fromParts) != len(hostParts) {
-			continue
-		}
+		matchedRefreshDomain := matchDomain(host, c.UrlConfigRefresh.RefreshDomains, func(d RefreshDomain) string { return d.Domain })
 
-		isMatch := true
-		for i, part := range fromParts {
-			if part == "*" {
-				continue
+		if matchedRefreshDomain != nil {
+			if matchedRefreshDomain.RefreshOn == "hit" && matchedRedirect != nil {
+				logger.Std.Printf("Refreshing config due to match with refresh domain %q and a redirect was found", matchedRefreshDomain.Domain)
+				if err := c.Load(); err != nil {
+					logger.Err.Printf("Could not refresh config from URL: %s", err)
+				}
+
+				return
 			}
 
-			if part != hostParts[i] {
-				isMatch = false
-				break
+			if matchedRefreshDomain.RefreshOn == "miss" && matchedRedirect == nil {
+				logger.Std.Printf("Refreshing config due to match with refresh domain %q and no redirect was found", matchedRefreshDomain.Domain)
+				if err := c.Load(); err != nil {
+					logger.Err.Printf("Could not refresh config from URL: %s", err)
+				}
+
+				return
 			}
 		}
 
-		if isMatch {
-			return &r
-		}
-	}
+		// Refresh config if refresh-on-hit is set and a redirect was found
+		if c.UrlConfigRefresh.RefreshOnHit && matchedRedirect != nil {
+			logger.Std.Printf("Refreshing config due to refresh-on-hit and a redirect was found")
+			if err := c.Load(); err != nil {
+				logger.Err.Printf("Could not refresh config from URL: %s", err)
+			}
 
-	return nil
+			return
+		}
+
+		// Refresh config if refresh-on-miss is set and no redirect was found
+		if c.UrlConfigRefresh.RefreshOnMiss && matchedRedirect == nil {
+			logger.Std.Printf("Refreshing config due to refresh-on-miss and no redirect was found")
+			if err := c.Load(); err != nil {
+				logger.Err.Printf("Could not refresh config from URL: %s", err)
+			}
+
+			return
+		}
+	}()
+
+	return matchedRedirect
 }
 
 // Copy configurations from another config

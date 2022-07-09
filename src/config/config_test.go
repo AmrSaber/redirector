@@ -55,87 +55,72 @@ func TestConfigValidation(t *testing.T) {
 }
 
 func TestConfigDomainMatching(t *testing.T) {
-	// Test exact match
-	configs := Config{
-		Redirects: []Redirect{
-			{From: "example.com", To: "https://target.com", PreservePath: false},
-		},
-	}
+	type Domain string
+	mapper := func(d Domain) string { return string(d) }
 
-	if configs.GetRedirect("example.com") == nil {
+	// Test exact match
+	list := []Domain{"example.com"}
+
+	if matchDomain("example.com", list, mapper) == nil {
 		t.Errorf("expected redirect, got nil")
 	}
 
-	if configs.GetRedirect("example-2.com") != nil {
+	if matchDomain("example-2.com", list, mapper) != nil {
 		t.Errorf("expected nil, got redirect")
 	}
 
 	// Test wildcard match
-	configs = Config{
-		Redirects: []Redirect{
-			{From: "*.example.com", To: "https://target.com", PreservePath: true},
-		},
-	}
+	list = []Domain{"*.example.com"}
 
-	if configs.GetRedirect("a.example.com") == nil {
+	if matchDomain("a.example.com", list, mapper) == nil {
 		t.Errorf("expected redirect, got nil")
 	}
 
-	if configs.GetRedirect("b.example.com") == nil {
+	if matchDomain("b.example.com", list, mapper) == nil {
 		t.Errorf("expected redirect, got nil")
 	}
 
-	if configs.GetRedirect("a.b.example.com") != nil {
+	if matchDomain("a.b.example.com", list, mapper) != nil {
 		t.Errorf("expected nil, got redirect")
 	}
 
-	if configs.GetRedirect("example.com") != nil {
+	if matchDomain("example.com", list, mapper) != nil {
 		t.Errorf("expected nil, got redirect")
 	}
 
 	// Test it matches first redirect
-	configs = Config{
-		Redirects: []Redirect{
-			{From: "exact.example.com", To: "https://exact-target.com", PreservePath: true},
-			{From: "*.example.com", To: "https://target.com", PreservePath: true},
-		},
-	}
+	list = []Domain{"exact.example.com", "*.example.com"}
 
-	exact := configs.GetRedirect("exact.example.com")
+	exact := matchDomain("exact.example.com", list, mapper)
 	if exact == nil {
 		t.Errorf("expected redirect, got nil")
 	}
 
-	if exact != nil && exact.To != configs.Redirects[0].To {
-		t.Errorf("expected %s, got %s", configs.Redirects[0].To, exact.To)
+	if exact != &list[0] {
+		t.Errorf("expected %s, got %s", list[0], *exact)
 	}
 
-	if configs.GetRedirect("b.example.com") == nil {
+	if matchDomain("b.example.com", list, mapper) == nil {
 		t.Errorf("expected redirect, got nil")
 	}
 
-	if configs.GetRedirect("a.b.example.com") != nil {
+	if matchDomain("a.b.example.com", list, mapper) != nil {
 		t.Errorf("expected nil, got redirect")
 	}
 
-	if configs.GetRedirect("example.com") != nil {
+	if matchDomain("example.com", list, mapper) != nil {
 		t.Errorf("expected nil, got redirect")
 	}
 
 	// Test matching exact match first
-	configs = Config{
-		Redirects: []Redirect{
-			{From: "*.example.com", To: "https://target.com", PreservePath: true},
-			{From: "exact.example.com", To: "https://exact-target.com", PreservePath: true},
-		},
-	}
+	list = []Domain{"*.example.com", "exact.example.com"}
 
-	exact = configs.GetRedirect("exact.example.com")
+	exact = matchDomain("exact.example.com", list, mapper)
 	if exact == nil {
 		t.Errorf("expected redirect, got nil")
 	}
 
-	if exact != nil && exact.To != configs.Redirects[1].To {
-		t.Errorf("expected %s, got %s", configs.Redirects[1].To, exact.To)
+	if exact != &list[1] {
+		t.Errorf("expected %s, got %s", list[1], *exact)
 	}
 }
