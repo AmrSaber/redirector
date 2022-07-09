@@ -155,6 +155,16 @@ func (c *Config) Validate() error {
 		}
 	}
 
+	for i, d := range c.UrlConfigRefresh.RefreshDomains {
+		if !domainRegex.MatchString(d.Domain) {
+			errors = append(errors, fmt.Sprintf(`Invalid "domain" for refresh domains [#%d]: %s`, i, d.Domain))
+		}
+
+		if d.RefreshOn != "hit" && d.RefreshOn != "miss" {
+			errors = append(errors, fmt.Sprintf(`Invalid "refresh-on" for refresh domains [#%d]: %s`, i, d.RefreshOn))
+		}
+	}
+
 	if len(errors) != 0 {
 		return fmt.Errorf(strings.Join(errors, "\n"))
 	} else {
