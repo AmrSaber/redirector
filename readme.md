@@ -71,11 +71,34 @@ The configuration file is a yaml file having the following structure:
 # Default: 8080
 port: 3000
 
-# Cache time to live, if the configuration is loaded from a URL, will attempt to refresh the configuration after that time
-# Available time units are ("ns" for nanosecond, "us" for microsecond, "ms" for millisecond, "s" for second, "m" for minute, "h" for hour)
-# You can use fractions like 2h30m10s
-# Default: "4h"
-cache-ttl: 6h
+# Options for managing the cached configurations in case it's loaded from a URL
+url-config-refresh:
+  # Cache time to live, will attempt to refresh the configuration after that time
+  # Available time units are ("ns" for nanosecond, "us" for microsecond, "ms" for millisecond, "s" for second, "m" for minute, "h" for hour)
+  # You can use fractions like 2h30m10s
+  # Default: "6h"
+  cache-ttl: 12h
+
+  # A list of domains to refresh when there is redirect miss/hit
+  # Any matching domain from this list, will overwrite refresh-on-hit and refresh-on-miss options
+  refresh-domains:
+    - # Domain name, can include wild cards just like redirects
+      # Required field, must be a valid domain name
+      domain: '*.amr-saber.io'
+
+      # Whether to refresh when there is a miss or a hit
+      # When set to "hit" and the domain name matches the refresh domain, acts as if refresh-on-hit is set for this request
+      # When set to "miss" and the domain name matches the refresh domain, acts as if refresh-on-miss is set for this request
+      # Required field, must be one of (hit, miss)
+      refresh-on: miss
+
+  # Whether to refresh or not when there was a matched redirect
+  # Default: false
+  refresh-on-hit: true
+
+  # Whether to refresh or not when there was no matched redirect
+  # Default: false
+  refresh-on-miss: true
 
 # Whether or not the application should send temp redirection, the application will send permanent redirection status if set to false
 # The browser will cache the result if the status is permanent redirect, resulting in faster redirection, but slower invalidation in case you changed redirection target
