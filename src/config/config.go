@@ -113,7 +113,7 @@ func (c *Config) Load() error {
 	c.LoadedAt = time.Now()
 
 	if c.UrlConfigRefresh.CacheTTL == 0 {
-		c.UrlConfigRefresh.CacheTTL, _ = time.ParseDuration("4h")
+		c.UrlConfigRefresh.CacheTTL, _ = time.ParseDuration("6h")
 	}
 
 	if c.Port == 0 {
