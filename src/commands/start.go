@@ -73,13 +73,14 @@ var StartCommand = &cli.Command{
 		}
 
 		server := server.SetupServer(configs)
+		serverError := make(chan error)
 		done := make(chan error)
 
 		// Start server
 		go func() {
 			logger.Std.Println("Starting server...")
 			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				done <- fmt.Errorf("could not start server: %w", err)
+				serverError <- fmt.Errorf("could not start server: %w", err)
 			}
 		}()
 
@@ -96,8 +97,9 @@ var StartCommand = &cli.Command{
 					done <- nil
 				}
 
-			// Incase server could not start, exit directly
-			case <-done:
+			// Incase server could not start, exit directly bubbling the error
+			case err := <-serverError:
+				done <- err
 			}
 		}()
 
