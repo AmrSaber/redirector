@@ -20,7 +20,7 @@ curl -o redirector -sSL https://github.com/amrsaber/redirector/releases/download
 chmod +x redirector
 
 # Execute
-./redirector --file config.yaml
+./redirector start --file config.yaml
 ```
 
 ### Docker Image
@@ -30,13 +30,13 @@ You can use the application's docker image `ghcr.io/amrsaber/redirector` You can
 For example
 
 ```bash
-docker run -p 8080:8080 ghcr.io/amrsaber/redirector:latest --url https://url-to-config.com
+docker run -p 8080:8080 ghcr.io/amrsaber/redirector:latest start --url https://url-to-config.com
 ```
 
 Or using a file
 
 ```bash
-docker run -p 8080:8080 -v /path/to/config.yaml:/config.yaml ghcr.io/amrsaber/redirector:latest --file /config.yaml
+docker run -p 8080:8080 -v /path/to/config.yaml:/config.yaml ghcr.io/amrsaber/redirector:latest start --file /config.yaml
 ```
 
 ## Usage
@@ -48,6 +48,7 @@ You can load configuration from different sources:
 - From file using `--file` flag then file name, e.g. `redirector --file config.yaml`
 - From URL using `--url` flag then URL, e.g. `redirector --url https://some-url.com/path/to/config`
 - From URL using `CONFIG_URL` environment variable: just set the env variable and start the application, e.g. `CONFIG_URL=https//some-url.com/some/path redirector`
+  - Redirector also looks for `.env` file in the current directory, if it's present, redirector parses it.
 - From STDIN using `--stdin` flag, e.g. `cat config.yaml | redirector --stdin`
 
 The application will print the final form of the parsed configuration after parsing them, the configuration will be validated for the right type and schema, any additional fields will be ignored.
