@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"path"
@@ -10,20 +9,11 @@ import (
 	"github.com/AmrSaber/redirector/src/lib/logger"
 )
 
-func SetupServer(ctx context.Context, configs *config.Config) *http.Server {
+func SetupServer(configs *config.Config) *http.Server {
 	server := http.Server{
 		Addr:    fmt.Sprintf(":%d", configs.Port),
 		Handler: getRedirectionMux(configs),
 	}
-
-	// Stop server on context cancel
-	go func() {
-		<-ctx.Done()
-
-		logger.Std.Println("Stopping server...")
-		server.Shutdown(context.Background())
-		logger.Std.Println("Server stopped")
-	}()
 
 	return &server
 }
