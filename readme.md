@@ -63,6 +63,15 @@ In case of providing the configuration from a file, the application will attempt
 
 In case of providing the configuration from a URL (using `--url` flag or the env variable), the application will attempt to refresh the configuration from the URL after `cache-ttl` time specified in the configuration file. If the application fails to refresh after the specified cache-ttl time (invalid config format, network problem, etc...) it will keep the last valid parsed configuration and attempt to refresh with each new request.
 
+#### HTTP Basic Auth
+
+You can protect a redirect behind http basic auth using the `auth` field as described in the schema below.
+
+Notes:
+
+- if the username and password of the basic auth were sent through http, they could be intercepted by a hacker.
+- Browsers cache username and passwords for http basic auth, so in case it's intended for personal use only, make sure that you use incognito browsing if you are opening the url from someone else's device.
+
 ### Configuration File
 
 The configuration file is a yaml file having the following structure:
@@ -130,6 +139,18 @@ redirects:
     # You can specify if this is a temp redirect or not per each redirect, this will overwrite the global temp-redirect option
     # Default: same value as global `temp-redirect` field
     temp-redirect: true
+
+    # Basic auth configuration, if this field is not provided, the redirection will be publicly available
+    auth:
+      # Required field, auth username
+      username: amr-saber
+
+      # Required field, auth password
+      password: 1234
+
+      # Optional field, the realm for the basic auth
+      # Default value: "Restricted"
+      realm: my-realm
 ```
 
 ### Redirection Notes
