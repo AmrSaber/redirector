@@ -12,7 +12,7 @@ func LoadConfig(ctx context.Context, readStdin bool, filePath, url string) *Conf
 		configs := NewConfig(SOURCE_STDIN, "")
 
 		if err := configs.Load(); err != nil {
-			logger.Err.Fatal("Could not load config", err)
+			logger.Err.Fatal("Could not load config: ", err)
 		}
 
 		return configs
@@ -23,7 +23,7 @@ func LoadConfig(ctx context.Context, readStdin bool, filePath, url string) *Conf
 		configs := NewConfig(SOURCE_FILE, filePath)
 
 		if err := configs.Load(); err != nil {
-			logger.Err.Fatal("Could not load config", err)
+			logger.Err.Fatal("Could not load config: ", err)
 		}
 
 		// Watch config file for updates
@@ -51,7 +51,7 @@ func LoadConfig(ctx context.Context, readStdin bool, filePath, url string) *Conf
 		configs := NewConfig(SOURCE_URL, url)
 
 		if err := configs.Load(); err != nil {
-			logger.Err.Fatal("Could not load config file", err)
+			logger.Err.Fatal("Could not load config file: ", err)
 		}
 
 		return configs

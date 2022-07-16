@@ -167,6 +167,14 @@ func (c *Config) Validate() error {
 		if r.PreservePath && hasPathRegex.MatchString(r.To) {
 			errors = append(errors, fmt.Sprintf(`"To" URL cannot contain path and set preserve path [#%d]: %s`, i, r.To))
 		}
+
+		if r.Auth != nil && r.Auth.Username == "" {
+			errors = append(errors, fmt.Sprintf(`Auth "username" must be provided [#%d]`, i))
+		}
+
+		if r.Auth != nil && r.Auth.Password == "" {
+			errors = append(errors, fmt.Sprintf(`Auth "password" must be provided [#%d]`, i))
+		}
 	}
 
 	for i, d := range c.UrlConfigRefresh.RefreshDomains {
