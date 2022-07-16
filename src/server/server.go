@@ -1,6 +1,8 @@
 package server
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
 	"fmt"
 	"net/http"
 	"path"
@@ -36,6 +38,15 @@ func getRedirectionMux(configs *config.Config) http.Handler {
 			return
 		}
 
+		// If user is not authorized, prompt for basic auth and return UNAUTHORIZED
+		if !isAuthorized(r, redirectInfo) {
+			w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Basic realm="%s", charset="UTF-8"`, redirectInfo.Auth.Realm))
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+
+			logger.Std.Printf("Received unauthorized request for host: %s", requestPath)
+			return
+		}
+
 		redirectPath := redirectInfo.To
 
 		if redirectInfo.PreservePath {
@@ -53,4 +64,25 @@ func getRedirectionMux(configs *config.Config) http.Handler {
 	})
 
 	return handler
+}
+
+func isAuthorized(r *http.Request, redirectInfo *config.Redirect) bool {
+	if redirectInfo.Auth == nil {
+		return true
+	}
+
+	username, password, ok := r.BasicAuth()
+	if !ok {
+		return false
+	}
+
+	usernameHash := sha256.Sum256([]byte(username))
+	passwordHash := sha256.Sum256([]byte(password))
+	expectedUsernameHash := sha256.Sum256([]byte(redirectInfo.Auth.Username))
+	expectedPasswordHash := sha256.Sum256([]byte(redirectInfo.Auth.Password))
+
+	usernameMatch := (subtle.ConstantTimeCompare(usernameHash[:], expectedUsernameHash[:]) == 1)
+	passwordMatch := (subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1)
+
+	return usernameMatch && passwordMatch
 }
