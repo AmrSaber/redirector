@@ -9,7 +9,7 @@ import (
 	"sync"
 
 	"github.com/AmrSaber/redirector/src/config"
-	"github.com/AmrSaber/redirector/src/logger"
+	"github.com/AmrSaber/redirector/src/lib/logger"
 	"github.com/AmrSaber/redirector/src/server"
 	"github.com/joho/godotenv"
 )

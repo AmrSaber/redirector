@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/AmrSaber/redirector/src/logger"
+	"github.com/AmrSaber/redirector/src/lib/logger"
 )
 
 // Returns a pointer to the element of the list that matched the domain after mapping it with the given mapper

@@ -3,7 +3,7 @@ package watchers
 import (
 	"context"
 
-	"github.com/AmrSaber/redirector/src/logger"
+	"github.com/AmrSaber/redirector/src/lib/logger"
 	"github.com/fsnotify/fsnotify"
 )
 

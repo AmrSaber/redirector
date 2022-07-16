@@ -3,8 +3,8 @@ package config
 import (
 	"context"
 
-	"github.com/AmrSaber/redirector/src/logger"
-	"github.com/AmrSaber/redirector/src/watchers"
+	"github.com/AmrSaber/redirector/src/lib/logger"
+	"github.com/AmrSaber/redirector/src/lib/watchers"
 )
 
 func LoadConfig(ctx context.Context, readStdin bool, filePath, url string) *Config {

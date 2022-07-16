@@ -7,7 +7,7 @@ import (
 	"path"
 
 	"github.com/AmrSaber/redirector/src/config"
-	"github.com/AmrSaber/redirector/src/logger"
+	"github.com/AmrSaber/redirector/src/lib/logger"
 )
 
 func SetupServer(ctx context.Context, configs *config.Config) *http.Server {
