@@ -58,10 +58,17 @@ type RefreshDomain struct {
 }
 
 type Redirect struct {
-	From         string `yaml:"from"`
-	To           string `yaml:"to"`
-	PreservePath bool   `yaml:"preserve-path"`
-	TempRedirect *bool  `yaml:"temp-redirect"`
+	From         string        `yaml:"from"`
+	To           string        `yaml:"to"`
+	PreservePath bool          `yaml:"preserve-path"`
+	TempRedirect *bool         `yaml:"temp-redirect"`
+	Auth         *RedirectAuth `yaml:"auth,omitempty"`
+}
+
+type RedirectAuth struct {
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	Realm    string `yaml:"realm"`
 }
 
 func NewConfig(source, uri string) *Config {
@@ -125,6 +132,10 @@ func (c *Config) Load() error {
 	for i, r := range c.Redirects {
 		if r.TempRedirect == nil {
 			c.Redirects[i].TempRedirect = &c.TempRedirect
+		}
+
+		if r.Auth != nil && r.Auth.Realm == "" {
+			c.Redirects[i].Auth.Realm = "Restricted"
 		}
 	}
 
