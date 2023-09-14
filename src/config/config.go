@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
-	"regexp"
 	"strings"
 	"time"
 
@@ -55,14 +55,6 @@ type RefreshDomain struct {
 
 	// Whether to refresh on domain hit or miss
 	RefreshOn string `yaml:"refresh-on"`
-}
-
-type Redirect struct {
-	From         string        `yaml:"from"`
-	To           string        `yaml:"to"`
-	PreservePath bool          `yaml:"preserve-path"`
-	TempRedirect *bool         `yaml:"temp-redirect"`
-	Auth         *RedirectAuth `yaml:"auth,omitempty"`
 }
 
 type RedirectAuth struct {
@@ -147,9 +139,6 @@ func (c *Config) Validate() error {
 	errors := []string{}
 
 	// Validate that each "from" is a valid domain name and each "to" is a valid URL
-	domainRegex := regexp.MustCompile(`^(?:[a-zA-Z0-9-_]+|\*)(?:\.(?:[a-zA-Z0-9-_]+|\*))+$`)
-	urlRegex := regexp.MustCompile(`^\w+://[a-zA-Z0-9-_]+(?:\.[a-zA-Z0-9-_]+)+(?:/[^/]*)*$`)
-	hasPathRegex := regexp.MustCompile(`^.+//.+(?:/[^/]*)+$`)
 
 	for i, r := range c.Redirects {
 		// Trim trailing slash from each domain
@@ -166,6 +155,25 @@ func (c *Config) Validate() error {
 
 		if r.PreservePath && hasPathRegex.MatchString(r.To) {
 			errors = append(errors, fmt.Sprintf(`"To" URL cannot contain path and set preserve path [#%d]: %s`, i, r.To))
+		}
+
+		if toWildcardsCount := strings.Count(r.To, "*"); toWildcardsCount > 0 {
+			toUrl, _ := url.Parse(r.To)
+
+			toSectionsCount := len(strings.Split(toUrl.Host, "."))
+			fromSectionsCount := len(strings.Split(r.From, "."))
+
+			if toSectionsCount != fromSectionsCount {
+				errors = append(
+					errors,
+					fmt.Sprintf(
+						`"to" has wildcard(s) but "To" sections (found %d) and "From" sections (found %d) don't match `,
+						toSectionsCount,
+						fromSectionsCount,
+					),
+				)
+			}
+
 		}
 
 		if r.Auth != nil && r.Auth.Username == "" {
@@ -194,6 +202,7 @@ func (c *Config) Validate() error {
 	}
 }
 
+// TODO: add lock for this method (only)
 // Gets the redirection that matches the given domain
 func (c *Config) GetRedirect(domain string) *Redirect {
 	// Refresh the config if it's stale

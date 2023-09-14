@@ -26,7 +26,7 @@ func TestConfigValidation(t *testing.T) {
 
 	err = configs.Validate()
 	if err == nil {
-		t.Errorf("unexpected error on 'from', got nil")
+		t.Errorf("expected error on 'from', got nil")
 	}
 
 	// Test invalid "to"
@@ -38,7 +38,7 @@ func TestConfigValidation(t *testing.T) {
 
 	err = configs.Validate()
 	if err == nil {
-		t.Errorf("unexpected error on 'to', got nil")
+		t.Errorf("expected error on 'to', got nil")
 	}
 
 	// Test invalid "preserve-path"
@@ -50,7 +50,32 @@ func TestConfigValidation(t *testing.T) {
 
 	err = configs.Validate()
 	if err == nil {
-		t.Errorf("unexpected error on 'preserve-path', got nil")
+		t.Errorf("expected error on 'preserve-path', got nil")
+	}
+
+	// Test "to" wildcards
+	// same count
+	configs = Config{
+		Redirects: []Redirect{
+			{From: "*.*.example.com", To: "https://a.*.target.com"},
+		},
+	}
+
+	err = configs.Validate()
+	if err != nil {
+		t.Errorf(`unexpected error on "to" wildcard path: %q`, err)
+	}
+
+	// Different count
+	configs = Config{
+		Redirects: []Redirect{
+			{From: "example.com", To: "https://*.target.com"},
+		},
+	}
+
+	err = configs.Validate()
+	if err == nil {
+		t.Errorf(`expected error on "to" wildcard path, got nil`)
 	}
 }
 

@@ -47,11 +47,7 @@ func getRedirectionMux(configs *config.Config) http.Handler {
 			return
 		}
 
-		redirectPath := redirectInfo.To
-
-		if redirectInfo.PreservePath {
-			redirectPath = path.Join(redirectPath, r.URL.Path)
-		}
+		redirectPath := redirectInfo.ResolvePath(r)
 
 		logger.Std.Printf("Redirecting %q to %q", requestPath, redirectPath)
 
@@ -76,6 +72,7 @@ func isAuthorized(r *http.Request, redirectInfo *config.Redirect) bool {
 		return false
 	}
 
+	// Hashes are used to perform const-time password check
 	usernameHash := sha256.Sum256([]byte(username))
 	passwordHash := sha256.Sum256([]byte(password))
 	expectedUsernameHash := sha256.Sum256([]byte(redirectInfo.Auth.Username))
