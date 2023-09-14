@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"regexp"
@@ -84,13 +84,13 @@ func (c *Config) Load() error {
 
 	switch c.Source {
 	case SOURCE_STDIN:
-		yamlBody, err = ioutil.ReadAll(os.Stdin)
+		yamlBody, err = io.ReadAll(os.Stdin)
 		if err != nil {
 			return err
 		}
 
 	case SOURCE_FILE:
-		yamlBody, err = ioutil.ReadFile(c.ConfigURI)
+		yamlBody, err = os.ReadFile(c.ConfigURI)
 		if err != nil {
 			return err
 		}
@@ -101,7 +101,7 @@ func (c *Config) Load() error {
 			return nil
 		}
 
-		yamlBody, err = ioutil.ReadAll(res.Body)
+		yamlBody, err = io.ReadAll(res.Body)
 		if err != nil {
 			return nil
 		}
