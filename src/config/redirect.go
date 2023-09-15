@@ -14,7 +14,6 @@ type Redirect struct {
 	Auth         *RedirectAuth `yaml:"auth,omitempty"`
 }
 
-// TODO: document
 func (redirect Redirect) ResolvePath(request *http.Request) string {
 	toUrl, _ := url.Parse(redirect.To)
 
