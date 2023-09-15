@@ -123,11 +123,11 @@ temp-redirect: true
 redirects:
   - # Will redirect traffic from this domain
     # You can use * in place of domain sections, e.g. *.amr-saber.io, *.*.io, *.amr-saber.*, *.*.* will all match (subdomain.amr-saber.io)
-    # Required field, and must not contain protocol or ports
+    # Required field, and must not contain protocol or port
     from: subdomain.amr-saber.io
 
     # Will redirect traffic to this URL
-    # Required field, and must be a valid URL; cannot contain a path if `preserve-path` option is set
+    # Required field, and must be a valid URL; cannot contain a path if `preserve-path` option is true
     to: https://google.com
 
     # Whether or not to preserve the path when redirecting
@@ -151,6 +151,16 @@ redirects:
       # Optional field, the realm for the basic auth
       # Default value: "Restricted"
       realm: my-realm
+
+  - from: *.amr-saber.io
+
+    # "to" can also contain *, in this case both "to" and "from" must have the same structure
+    # and will substitute the wildcard(s) part(s) from the corresponding parts from the "from" domain
+    # i.e. if "to" is *.x.z, "from" can be (a.b.c, a.*.c, a.b.*, *.*.*) but not b.c or a.b.c.d
+    # This is useful if you wish to redirect all subdomains to a new domain for example
+    # e.g. "to": (*.x.z) "from": (*.b.c) => request from (a.b.c) will be redirected to (a.x.z)
+    # This can -of course- be combined with all the other options (preserve-path, temp-redirect, auth, ...)
+    to: https://*.amrsaber.io
 ```
 
 ### Redirection Notes
