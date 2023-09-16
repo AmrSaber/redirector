@@ -202,7 +202,7 @@ func (c *Config) Validate() error {
 	}
 }
 
-// TODO: add lock for this method (only)
+// TODO: use active object pattern to manage the usage of config
 // Gets the redirection that matches the given domain
 func (c *Config) GetRedirect(domain string) *Redirect {
 	// Refresh the config if it's stale
