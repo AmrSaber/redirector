@@ -60,19 +60,21 @@ var StartCommand = &cli.Command{
 			}
 		}
 
-		configs := config.LoadConfig(ctx, readStdin, filePath, url)
-		if configs == nil {
+		configManager := config.CreateConfigManager(ctx, readStdin, filePath, url)
+		if configManager == nil {
 			logger.Std.Println("No configuration provided!")
 			return nil
 		}
 
-		logger.Std.Printf("Parsed configurations:\n\n%s\n", configs)
+		defer configManager.Close()
+
+		logger.Std.Printf("Parsed configurations:\n\n%s\n", configManager.GetStringConfig())
 
 		if dryRun {
 			return nil
 		}
 
-		server := server.SetupServer(configs)
+		server := server.SetupServer(configManager)
 		serverError := make(chan error)
 		done := make(chan error)
 

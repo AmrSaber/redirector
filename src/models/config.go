@@ -1,21 +1,12 @@
-package config
+package models
 
 import (
 	"fmt"
-	"io"
-	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
-)
-
-const (
-	SOURCE_STDIN = "@source:stdin"
-	SOURCE_FILE  = "@source:file"
-	SOURCE_URL   = "@source:url"
 )
 
 type Config struct {
@@ -32,7 +23,6 @@ type Config struct {
 	Redirects []Redirect `yaml:"redirects"`
 }
 
-// TODO: figure out a way to test the execution of these options
 type UrlRefreshOptions struct {
 	// How often to refresh the URL
 	CacheTTL time.Duration `yaml:"cache-ttl"`
@@ -70,47 +60,17 @@ func NewConfig(source, uri string) *Config {
 	}
 }
 
-func (c *Config) Load() error {
-	var yamlBody []byte
-	var err error
-
-	switch c.Source {
-	case SOURCE_STDIN:
-		yamlBody, err = io.ReadAll(os.Stdin)
-		if err != nil {
-			return err
-		}
-
-	case SOURCE_FILE:
-		yamlBody, err = os.ReadFile(c.ConfigURI)
-		if err != nil {
-			return err
-		}
-
-	case SOURCE_URL:
-		res, err := http.Get(c.ConfigURI)
-		if err != nil {
-			return nil
-		}
-
-		yamlBody, err = io.ReadAll(res.Body)
-		if err != nil {
-			return nil
-		}
-
-		res.Body.Close()
-	}
-
+func (c *Config) Load(yamlBody []byte) error {
 	var parsedConfig Config
 	if err := yaml.Unmarshal(yamlBody, &parsedConfig); err != nil {
 		return fmt.Errorf("could not parse configs from yaml: %s", err)
 	}
 
-	if err := parsedConfig.Validate(); err != nil {
+	if err := parsedConfig.validate(); err != nil {
 		return fmt.Errorf("invalid configurations:\n%s", err)
 	}
 
-	c.CopyFrom(&parsedConfig)
+	c.copyFrom(&parsedConfig)
 	c.LoadedAt = time.Now()
 
 	if c.UrlConfigRefresh.CacheTTL == 0 {
@@ -135,7 +95,7 @@ func (c *Config) Load() error {
 }
 
 // Validates the config
-func (c *Config) Validate() error {
+func (c Config) validate() error {
 	errors := []string{}
 
 	// Validate that each "from" is a valid domain name and each "to" is a valid URL
@@ -190,7 +150,7 @@ func (c *Config) Validate() error {
 			errors = append(errors, fmt.Sprintf(`Invalid "domain" for refresh domains [#%d]: %s`, i, d.Domain))
 		}
 
-		if d.RefreshOn != "hit" && d.RefreshOn != "miss" {
+		if d.RefreshOn != REFRESH_ON_HIT && d.RefreshOn != REFRESH_ON_MISS {
 			errors = append(errors, fmt.Sprintf(`Invalid "refresh-on" for refresh domains [#%d]: %s`, i, d.RefreshOn))
 		}
 	}
@@ -202,30 +162,12 @@ func (c *Config) Validate() error {
 	}
 }
 
-// TODO: use active object pattern to manage the usage of config
-// Gets the redirection that matches the given domain
-func (c *Config) GetRedirect(domain string) *Redirect {
-	// Refresh the config if it's stale
-	if c.Source == SOURCE_URL && time.Since(c.LoadedAt) >= c.UrlConfigRefresh.CacheTTL {
-		reloadConfig(c)
-	}
-
-	matchedRedirect := matchDomain(domain, c.Redirects, func(r Redirect) string { return r.From })
-
-	// Perform a refresh in the background if it's needed
-	if c.UrlConfigRefresh.RemapAfterRefresh {
-		if refreshed := refreshConfig(c, domain); refreshed {
-			matchedRedirect = matchDomain(domain, c.Redirects, func(r Redirect) string { return r.From })
-		}
-	} else {
-		go refreshConfig(c, domain)
-	}
-
-	return matchedRedirect
+func (c Config) IsStale() bool {
+	return c.Source == SOURCE_URL && time.Since(c.LoadedAt) >= c.UrlConfigRefresh.CacheTTL
 }
 
 // Copy configurations from another config
-func (c *Config) CopyFrom(other *Config) {
+func (c *Config) copyFrom(other *Config) {
 	c.Port = other.Port
 	c.TempRedirect = other.TempRedirect
 

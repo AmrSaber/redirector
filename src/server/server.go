@@ -9,18 +9,19 @@ import (
 
 	"github.com/AmrSaber/redirector/src/config"
 	"github.com/AmrSaber/redirector/src/lib/logger"
+	"github.com/AmrSaber/redirector/src/models"
 )
 
-func SetupServer(configs *config.Config) *http.Server {
+func SetupServer(configManager *config.ConfigManager) *http.Server {
 	server := http.Server{
-		Addr:    fmt.Sprintf(":%d", configs.Port),
-		Handler: getRedirectionMux(configs),
+		Addr:    fmt.Sprintf(":%d", configManager.GetPort()),
+		Handler: getRedirectionMux(configManager),
 	}
 
 	return &server
 }
 
-func getRedirectionMux(configs *config.Config) http.Handler {
+func getRedirectionMux(configs *config.ConfigManager) http.Handler {
 	handler := http.NewServeMux()
 
 	handler.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -62,8 +63,8 @@ func getRedirectionMux(configs *config.Config) http.Handler {
 	return handler
 }
 
-func isAuthorized(r *http.Request, redirectInfo *config.Redirect) bool {
-	if redirectInfo.Auth == nil {
+func isAuthorized(r *http.Request, redirect *models.Redirect) bool {
+	if redirect.Auth == nil {
 		return true
 	}
 
@@ -75,8 +76,8 @@ func isAuthorized(r *http.Request, redirectInfo *config.Redirect) bool {
 	// Hashes are used to perform const-time password check
 	usernameHash := sha256.Sum256([]byte(username))
 	passwordHash := sha256.Sum256([]byte(password))
-	expectedUsernameHash := sha256.Sum256([]byte(redirectInfo.Auth.Username))
-	expectedPasswordHash := sha256.Sum256([]byte(redirectInfo.Auth.Password))
+	expectedUsernameHash := sha256.Sum256([]byte(redirect.Auth.Username))
+	expectedPasswordHash := sha256.Sum256([]byte(redirect.Auth.Password))
 
 	usernameMatch := (subtle.ConstantTimeCompare(usernameHash[:], expectedUsernameHash[:]) == 1)
 	passwordMatch := (subtle.ConstantTimeCompare(passwordHash[:], expectedPasswordHash[:]) == 1)
