@@ -4,14 +4,17 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/AmrSaber/redirector/src/lib/logger"
 	"github.com/AmrSaber/redirector/src/models"
 )
 
 type ConfigManager struct {
-	config       models.Config
-	commandsChan chan func()
+	config models.Config
+
+	commandsChan      chan func()
+	internalWaitGroup sync.WaitGroup
 }
 
 func NewConfigManager(source, uri string) *ConfigManager {
@@ -34,6 +37,7 @@ func (manager *ConfigManager) start() {
 }
 
 func (manager *ConfigManager) Close() {
+	manager.internalWaitGroup.Wait()
 	close(manager.commandsChan)
 }
 
@@ -95,7 +99,11 @@ func (manager *ConfigManager) GetRedirect(domain string) *models.Redirect {
 		if manager.config.UrlConfigRefresh.RemapAfterRefresh {
 			manager.refreshConfig(domain)
 		} else {
-			manager.commandsChan <- func() { manager.refreshConfig(domain) }
+			manager.internalWaitGroup.Add(1)
+			go func() {
+				defer manager.internalWaitGroup.Done()
+				manager.commandsChan <- func() { manager.refreshConfig(domain) }
+			}()
 		}
 
 		redirectChan <- manager.matchRedirect(domain)
@@ -104,11 +112,11 @@ func (manager *ConfigManager) GetRedirect(domain string) *models.Redirect {
 	return <-redirectChan
 }
 
-func (manager ConfigManager) matchRedirect(domain string) *models.Redirect {
+func (manager *ConfigManager) matchRedirect(domain string) *models.Redirect {
 	return matchDomain(domain, manager.config.Redirects, func(r models.Redirect) string { return r.From })
 }
 
-func (manager ConfigManager) matchRefreshDomain(domain string) *models.RefreshDomain {
+func (manager *ConfigManager) matchRefreshDomain(domain string) *models.RefreshDomain {
 	return matchDomain(
 		domain,
 		manager.config.UrlConfigRefresh.RefreshDomains,
@@ -153,10 +161,10 @@ func (manager *ConfigManager) refreshConfig(domain string) {
 	}
 }
 
-func (manager ConfigManager) GetPort() int {
+func (manager *ConfigManager) GetPort() int {
 	return manager.config.Port
 }
 
-func (manager ConfigManager) GetStringConfig() string {
+func (manager *ConfigManager) GetStringConfig() string {
 	return manager.config.String()
 }
