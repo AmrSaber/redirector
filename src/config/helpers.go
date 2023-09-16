@@ -5,18 +5,6 @@ import (
 	"strings"
 )
 
-func reportError(errChan chan<- error, err error) {
-	if errChan == nil {
-		return
-	}
-
-	if err != nil {
-		errChan <- err
-	}
-
-	close(errChan)
-}
-
 // Returns a pointer to the element of the list that matched the domain after mapping it with the given mapper
 func matchDomain[T any](domain string, list []T, mapper func(T) string) *T {
 	domain = regexp.MustCompile(`(:\d+)?$`).ReplaceAllString(domain, "")
