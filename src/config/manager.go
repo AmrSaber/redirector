@@ -41,6 +41,15 @@ func (manager *ConfigManager) Close() {
 	close(manager.commandsChan)
 }
 
+// Asynchronously adds a command at the end of the commands queue
+func (manager *ConfigManager) dispatchCommand(command func()) {
+	manager.internalWaitGroup.Add(1)
+	go func() {
+		defer manager.internalWaitGroup.Done()
+		manager.commandsChan <- command
+	}()
+}
+
 func (manager *ConfigManager) LoadConfig() error {
 	errChan := make(chan error)
 
@@ -99,11 +108,7 @@ func (manager *ConfigManager) GetRedirect(domain string) *models.Redirect {
 		if manager.config.UrlConfigRefresh.RemapAfterRefresh {
 			manager.refreshConfig(domain)
 		} else {
-			manager.internalWaitGroup.Add(1)
-			go func() {
-				defer manager.internalWaitGroup.Done()
-				manager.commandsChan <- func() { manager.refreshConfig(domain) }
-			}()
+			manager.dispatchCommand(func() { manager.refreshConfig(domain) })
 		}
 
 		redirectChan <- manager.matchRedirect(domain)
