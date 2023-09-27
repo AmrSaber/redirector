@@ -47,3 +47,14 @@ func matchDomain[T any](domain string, list []T, mapper func(T) string) *T {
 
 	return nil
 }
+
+func executeCommandSync[T any](commandsChan chan func(), command func() T) T {
+	resChan := make(chan T)
+
+	commandsChan <- func() {
+		resChan <- command()
+		close(resChan)
+	}
+
+	return <-resChan
+}

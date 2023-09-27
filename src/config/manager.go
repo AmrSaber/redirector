@@ -15,6 +15,7 @@ type ConfigManager struct {
 
 	commandsChan      chan func()
 	internalWaitGroup sync.WaitGroup
+	workerWaitGroup   sync.WaitGroup
 }
 
 func NewConfigManager(source, uri string) *ConfigManager {
@@ -29,7 +30,9 @@ func NewConfigManager(source, uri string) *ConfigManager {
 }
 
 func (manager *ConfigManager) start() {
+	manager.workerWaitGroup.Add(1)
 	go func() {
+		defer manager.workerWaitGroup.Done()
 		for command := range manager.commandsChan {
 			command()
 		}
@@ -39,6 +42,7 @@ func (manager *ConfigManager) start() {
 func (manager *ConfigManager) Close() {
 	manager.internalWaitGroup.Wait()
 	close(manager.commandsChan)
+	manager.workerWaitGroup.Wait()
 }
 
 // Asynchronously adds a command at the end of the commands queue
@@ -51,70 +55,30 @@ func (manager *ConfigManager) dispatchCommand(command func()) {
 }
 
 func (manager *ConfigManager) LoadConfig() error {
-	errChan := make(chan error)
-
-	manager.commandsChan <- func() {
-		err := manager.loadConfigUnsafe()
-		errChan <- err
-	}
-
-	return <-errChan
-}
-
-func (manager *ConfigManager) loadConfigUnsafe() error {
-	var yamlBody []byte
-	var err error
-
-	switch manager.config.Source {
-	case models.SOURCE_STDIN:
-		yamlBody, err = io.ReadAll(os.Stdin)
-		if err != nil {
-			return err
-		}
-
-	case models.SOURCE_FILE:
-		yamlBody, err = os.ReadFile(manager.config.ConfigURI)
-		if err != nil {
-			return err
-		}
-
-	case models.SOURCE_URL:
-		res, err := http.Get(manager.config.ConfigURI)
-		if err != nil {
-			return err
-		}
-
-		yamlBody, err = io.ReadAll(res.Body)
-		if err != nil {
-			return err
-		}
-
-		res.Body.Close()
-	}
-
-	err = manager.config.Load(yamlBody)
-	return err
+	return executeCommandSync(
+		manager.commandsChan,
+		func() error { return manager.loadConfigUnsafe() },
+	)
 }
 
 // Gets the redirection that matches the given domain
 func (manager *ConfigManager) GetRedirect(domain string) *models.Redirect {
-	redirectChan := make(chan *models.Redirect)
+	return executeCommandSync(
+		manager.commandsChan,
+		func() *models.Redirect {
+			if manager.config.IsStale() {
+				manager.loadConfigUnsafe()
+			}
 
-	manager.commandsChan <- func() {
-		if manager.config.IsStale() {
-			manager.loadConfigUnsafe()
-		}
+			if manager.config.UrlConfigRefresh.RemapAfterRefresh {
+				manager.refreshConfig(domain)
+			} else {
+				manager.dispatchCommand(func() { manager.refreshConfig(domain) })
+			}
 
-		if manager.config.UrlConfigRefresh.RemapAfterRefresh {
-			manager.refreshConfig(domain)
-		} else {
-			manager.dispatchCommand(func() { manager.refreshConfig(domain) })
-		}
-
-		redirectChan <- manager.matchRedirect(domain)
-	}
-
-	return <-redirectChan
+			return manager.matchRedirect(domain)
+		},
+	)
 }
 
 func (manager *ConfigManager) matchRedirect(domain string) *models.Redirect {
@@ -166,10 +130,51 @@ func (manager *ConfigManager) refreshConfig(domain string) {
 	}
 }
 
+func (manager *ConfigManager) loadConfigUnsafe() error {
+	var yamlBody []byte
+	var err error
+
+	switch manager.config.Source {
+	case models.SOURCE_STDIN:
+		yamlBody, err = io.ReadAll(os.Stdin)
+		if err != nil {
+			return err
+		}
+
+	case models.SOURCE_FILE:
+		yamlBody, err = os.ReadFile(manager.config.ConfigURI)
+		if err != nil {
+			return err
+		}
+
+	case models.SOURCE_URL:
+		res, err := http.Get(manager.config.ConfigURI)
+		if err != nil {
+			return err
+		}
+
+		yamlBody, err = io.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+
+		res.Body.Close()
+	}
+
+	err = manager.config.Load(yamlBody)
+	return err
+}
+
 func (manager *ConfigManager) GetPort() int {
-	return manager.config.Port
+	return executeCommandSync(
+		manager.commandsChan,
+		func() int { return manager.config.Port },
+	)
 }
 
 func (manager *ConfigManager) GetStringConfig() string {
-	return manager.config.String()
+	return executeCommandSync(
+		manager.commandsChan,
+		func() string { return manager.config.String() },
+	)
 }
