@@ -4,67 +4,43 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"sync"
 
+	"github.com/AmrSaber/redirector/src/lib/active"
 	"github.com/AmrSaber/redirector/src/lib/logger"
 	"github.com/AmrSaber/redirector/src/models"
 )
 
 type ConfigManager struct {
 	config models.Config
-
-	commandsChan      chan func()
-	internalWaitGroup sync.WaitGroup
-	workerWaitGroup   sync.WaitGroup
+	active *active.ActiveObject
 }
 
 func NewConfigManager(source, uri string) *ConfigManager {
 	manager := &ConfigManager{
-		config:       *models.NewConfig(source, uri),
-		commandsChan: make(chan func(), 1024),
+		config: *models.NewConfig(source, uri),
+		active: active.NewActiveObject(1024),
 	}
 
-	manager.start()
+	manager.active.Start()
 
 	return manager
 }
 
-func (manager *ConfigManager) start() {
-	manager.workerWaitGroup.Add(1)
-	go func() {
-		defer manager.workerWaitGroup.Done()
-		for command := range manager.commandsChan {
-			command()
-		}
-	}()
-}
-
 func (manager *ConfigManager) Close() {
-	manager.internalWaitGroup.Wait()
-	close(manager.commandsChan)
-	manager.workerWaitGroup.Wait()
-}
-
-// Asynchronously adds a command at the end of the commands queue
-func (manager *ConfigManager) dispatchCommand(command func()) {
-	manager.internalWaitGroup.Add(1)
-	go func() {
-		defer manager.internalWaitGroup.Done()
-		manager.commandsChan <- command
-	}()
+	manager.active.Close()
 }
 
 func (manager *ConfigManager) LoadConfig() error {
-	return executeCommandSync(
-		manager.commandsChan,
+	return active.RunCommandSync(
+		manager.active,
 		func() error { return manager.loadConfigUnsafe() },
 	)
 }
 
 // Gets the redirection that matches the given domain
 func (manager *ConfigManager) GetRedirect(domain string) *models.Redirect {
-	return executeCommandSync(
-		manager.commandsChan,
+	return active.RunCommandSync(
+		manager.active,
 		func() *models.Redirect {
 			if manager.config.IsStale() {
 				manager.loadConfigUnsafe()
@@ -73,7 +49,7 @@ func (manager *ConfigManager) GetRedirect(domain string) *models.Redirect {
 			if manager.config.UrlConfigRefresh.RemapAfterRefresh {
 				manager.refreshConfig(domain)
 			} else {
-				manager.dispatchCommand(func() { manager.refreshConfig(domain) })
+				manager.active.DispatchCommand(func() { manager.refreshConfig(domain) })
 			}
 
 			return manager.matchRedirect(domain)
@@ -166,15 +142,15 @@ func (manager *ConfigManager) loadConfigUnsafe() error {
 }
 
 func (manager *ConfigManager) GetPort() int {
-	return executeCommandSync(
-		manager.commandsChan,
+	return active.RunCommandSync(
+		manager.active,
 		func() int { return manager.config.Port },
 	)
 }
 
 func (manager *ConfigManager) GetStringConfig() string {
-	return executeCommandSync(
-		manager.commandsChan,
+	return active.RunCommandSync(
+		manager.active,
 		func() string { return manager.config.String() },
 	)
 }
