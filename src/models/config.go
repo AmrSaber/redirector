@@ -123,7 +123,7 @@ func (c *Config) Load(yamlBody []byte) error {
 
 	for i, r := range c.Redirects {
 		if r.TempRedirect == nil {
-			c.Redirects[i].TempRedirect = c.TempRedirect
+			r.TempRedirect = c.TempRedirect
 		}
 
 		// Add actual auth objects to redirect for simpler authentication
@@ -134,6 +134,8 @@ func (c *Config) Load(yamlBody []byte) error {
 				r.ActualAuths.BasicAuth[authName] = c.Auth.BasicAuth[authName]
 			}
 		}
+
+		c.Redirects[i] = r
 	}
 
 	return nil
