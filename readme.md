@@ -9,7 +9,6 @@ Redirector also watches the configuration file for updates, so you do not need t
 ## Install
 
 ### From binaries
-
 You can download the binaries from the [latest release](https://github.com/AmrSaber/redirector/releases) manually, or using bash
 
 ```bash
@@ -24,7 +23,6 @@ chmod +x redirector
 ```
 
 ### Docker Image
-
 You can use the application's docker image `ghcr.io/amrsaber/redirector` You can also download a specific version with image tag, available tags can be found [here](https://github.com/AmrSaber/redirector/pkgs/container/redirector).
 
 For example
@@ -41,14 +39,19 @@ docker run -p 8080:8080 -v /path/to/config.yaml:/config.yaml ghcr.io/amrsaber/re
 
 ## Usage
 
-### Loading Configuration
+### Commands
+- `start`: starts the server, see more details below
+- `stop`: stops the server if it's running and returns "OK", otherwise returns error
+- `ping`: pings the server to make sure it's running and healthy, returns "PONG" if server is running, otherwise returns error
 
+To view commands and their documentation and flags, start the application with `--help`, `-h`, `help`, `h`, or without any commands. And you can use `--help` or `-h` with any command to view more details about it.
+
+### Loading Configuration
 You can load configuration from different sources:
 
 - From file using `--file` flag then file name, e.g. `redirector --file config.yaml`
 - From URL using `--url` flag then URL, e.g. `redirector --url https://some-url.com/path/to/config`
 - From URL using `CONFIG_URL` environment variable: just set the env variable and start the application, e.g. `CONFIG_URL=https//some-url.com/some/path redirector`
-  - Redirector also looks for `.env` file in the current directory, if it's present, redirector parses it.
 - From STDIN using `--stdin` flag, e.g. `cat config.yaml | redirector --stdin`
 
 The application will print the final form of the parsed configuration after parsing them, the configuration will be validated for the right type and schema, any additional fields will be ignored.
@@ -58,27 +61,23 @@ To only print the parsed configuration provide the flag `--dry-run`, e.g. `redir
 In case you provide more that 1 source, the precedence is as follows: stdin, file, url, env variable.
 
 #### Configuration Watching
-
 In case of providing the configuration from a file, the application will attempt to watch the file for changes and update the configuration automatically with after each change, if the file became invalid after an update, the application will keep the last valid parsed configuration.
 
 In case of providing the configuration from a URL (using `--url` flag or the env variable), the application will attempt to refresh the configuration from the URL after `cache-ttl` time specified in the configuration file. If the application fails to refresh after the specified cache-ttl time (invalid config format, network problem, etc...) it will keep the last valid parsed configuration and attempt to refresh with each new request.
 
 #### HTTP Basic Auth
-
 You can protect a redirect behind http basic auth using the `auth` field as described in the schema below.
 
 Notes:
-
 - if the username and password of the basic auth were sent through http, they could be intercepted by a hacker.
 - Browsers cache username and passwords for http basic auth, so in case it's intended for personal use only, make sure that you use incognito browsing if you are opening the url from someone else's device.
 
 ### Configuration File
-
 The configuration file is a yaml file having the following structure:
 
 ```yaml
 # The port for the application to listen on
-# Default: 8080
+# Default: 80
 port: 3000
 
 # Options for managing the cached configurations in case it's loaded from a URL
@@ -114,10 +113,38 @@ url-config-refresh:
   # Default: false
   refresh-on-miss: true
 
+# Auth schemas to be used with redirects
+auth:
+  # Basic auth is the only support type of auth for now
+  basic-auth:
+    # Schema name. Can be anything
+    some-auth:
+      # Basic auth realm. Can be anything. 
+      # Default: "Restricted"
+      realm: "MyRealm"
+
+      # Users defined within this schema. Each of them must have a non-empty username and password
+      # username cannot repeat across all defined basic-auth schemas
+      users:
+        - username: user-1
+          password: 1234
+        - username: user-2
+          password: 5678
+
+    # You can have as many auth schemas as you want
+    some-other-auth:
+      realm: "MyRealm"
+      users:
+        - username: user-4
+          password: 1234
+        - username: user-5
+          password: 5678
+
 # Whether or not the application should send temp redirection, the application will send permanent redirection status if set to false
-# The browser will cache the result if the status is permanent redirect, resulting in faster redirection, but slower invalidation in case you changed redirection target
-# Default: false
-temp-redirect: true
+# The browser will cache the result if the status is permanent redirect, resulting in faster redirection,
+# but slower invalidation in case you changed redirection target
+# Default: true
+temp-redirect: false
 
 # The list of redirection rules
 redirects:
@@ -137,20 +164,14 @@ redirects:
     preserve-path: true
 
     # You can specify if this is a temp redirect or not per each redirect, this will overwrite the global temp-redirect option
-    # Default: same value as global `temp-redirect` field
+    # Default: value of global `temp-redirect` field
     temp-redirect: true
 
-    # Basic auth configuration, if this field is not provided, the redirection will be publicly available
+    # Auth configuration, must be one of the schemas defined in `auth` global block
+    # If several basic-auth schemas are used, all of them must have the same realm
     auth:
-      # Required field, auth username
-      username: amr-saber
-
-      # Required field, auth password
-      password: 1234
-
-      # Optional field, the realm for the basic auth
-      # Default value: "Restricted"
-      realm: my-realm
+      - some-auth
+      - some-other-auth
 
   - from: *.amr-saber.io
 
@@ -164,13 +185,10 @@ redirects:
 ```
 
 ### Redirection Notes
-
 In case the request comes from a domain that matches several redirection rules, redirector will redirect to the first exact match if it's found, otherwise, it will redirect ot the first match with wildcard.
 
 ## Logging
-
 Redirector logs different events (like starting server, configuration parsing and update, received requests) to STDOUT, and logs errors and warnings to STDERR.
 
 ## Bugs and Feature Requests
-
 If you find any bug, or want to request any feature, feel free to [open a ticket](https://github.com/AmrSaber/redirector/issues).
