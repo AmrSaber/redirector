@@ -20,5 +20,6 @@ HEALTHCHECK CMD /redirector ping -q
 WORKDIR /
 
 COPY --from=build /redirector /redirector
+RUN chmod +x /redirector
 
 ENTRYPOINT ["/redirector"]
