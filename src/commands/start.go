@@ -10,7 +10,6 @@ import (
 	"github.com/AmrSaber/redirector/src/config"
 	"github.com/AmrSaber/redirector/src/lib/logger"
 	"github.com/AmrSaber/redirector/src/server"
-	"github.com/joho/godotenv"
 	"github.com/urfave/cli/v2"
 )
 
@@ -41,9 +40,6 @@ var StartCommand = &cli.Command{
 		// Runtime context
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-
-		// Load env variables if any
-		godotenv.Load()
 
 		// Get command flags
 		url := c.String("url")
