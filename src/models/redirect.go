@@ -17,9 +17,9 @@ type Redirect struct {
 func (redirect Redirect) ResolvePath(request *http.Request) string {
 	toUrl, _ := url.Parse(redirect.To)
 
-	if strings.Contains(toUrl.Hostname(), "*") {
-		toSections := strings.Split(toUrl.Hostname(), ".")
-		requestSections := strings.Split(request.URL.Hostname(), ".")
+	if strings.Contains(toUrl.Host, "*") {
+		toSections := strings.Split(toUrl.Host, ".")
+		requestSections := strings.Split(request.Host, ".")
 
 		// Substitute every * in to with corresponding section in request
 		for i, section := range toSections {

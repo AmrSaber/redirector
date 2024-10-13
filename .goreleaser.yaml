@@ -25,8 +25,6 @@ builds:
 archives:
   - format: binary
     name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}'
-    replacements:
-      darwin: macOS
 
 dockers:
   - dockerfile: goreleaser.dockerfile
