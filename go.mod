@@ -1,6 +1,6 @@
 module github.com/AmrSaber/redirector
 
-go 1.21
+go 1.22
 
 require (
 	github.com/fsnotify/fsnotify v1.5.4
