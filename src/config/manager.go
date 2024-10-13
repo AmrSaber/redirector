@@ -42,14 +42,16 @@ func (manager *ConfigManager) GetRedirect(domain string) *models.Redirect {
 	return active.RunCommandSync(
 		manager.active,
 		func() *models.Redirect {
-			if manager.config.IsStale() {
-				manager.loadConfigUnsafe()
-			}
+			if manager.config.Source == models.SOURCE_URL {
+				if manager.config.IsStale() {
+					manager.loadConfigUnsafe()
+				}
 
-			if manager.config.UrlConfigRefresh.RemapAfterRefresh {
-				manager.refreshConfig(domain)
-			} else {
-				manager.active.DispatchCommand(func() { manager.refreshConfig(domain) })
+				if manager.config.UrlConfigRefresh.RemapAfterRefresh {
+					manager.refreshConfigUnsafe(domain)
+				} else {
+					manager.active.DispatchCommand(func() { manager.refreshConfigUnsafe(domain) })
+				}
 			}
 
 			return manager.matchRedirect(domain)
@@ -69,7 +71,7 @@ func (manager *ConfigManager) matchRefreshDomain(domain string) *models.RefreshD
 	)
 }
 
-func (manager *ConfigManager) refreshConfig(domain string) {
+func (manager *ConfigManager) refreshConfigUnsafe(domain string) {
 	if manager.config.Source != models.SOURCE_URL {
 		return
 	}

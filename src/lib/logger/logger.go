@@ -10,7 +10,7 @@ var (
 	Err = log.New(os.Stderr, "", log.LstdFlags|log.Lshortfile)
 )
 
-func ResetLoggers() {
+func ResetLoggersFlags() {
 	Std.SetFlags(0)
 	Err.SetFlags(0)
 }

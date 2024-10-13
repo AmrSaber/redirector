@@ -22,7 +22,7 @@ var PingCommand = &cli.Command{
 		},
 	},
 	Action: func(c *cli.Context) error {
-		logger.ResetLoggers()
+		logger.ResetLoggersFlags()
 
 		quiet := c.Bool("quiet")
 		if quiet {

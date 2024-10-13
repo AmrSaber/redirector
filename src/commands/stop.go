@@ -15,7 +15,7 @@ var StopCommand = &cli.Command{
 	Name:  "stop",
 	Usage: "stops the server",
 	Action: func(c *cli.Context) error {
-		logger.ResetLoggers()
+		logger.ResetLoggersFlags()
 
 		conn, err := net.Dial("unix", utils.SOCKET_PATH)
 		if err != nil {
