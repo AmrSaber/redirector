@@ -12,7 +12,6 @@ builds:
     goos:
       - linux
       - darwin
-      - windows
 
     # GOARCH to build for.
     # For more info refer to: https://golang.org/doc/install/source#environment
@@ -32,6 +31,6 @@ dockers:
     goarch: amd64
     image_templates:
       - 'ghcr.io/amrsaber/{{ .ProjectName }}:{{ .Tag }}'
-      - 'ghcr.io/amrsaber/{{ .ProjectName }}:v{{ .Major }}'
       - 'ghcr.io/amrsaber/{{ .ProjectName }}:v{{ .Major }}.{{ .Minor }}'
+      - 'ghcr.io/amrsaber/{{ .ProjectName }}:v{{ .Major }}'
       - 'ghcr.io/amrsaber/{{ .ProjectName }}:latest'
