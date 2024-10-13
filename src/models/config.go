@@ -78,7 +78,7 @@ func (c *Config) Load(yamlBody []byte) error {
 	}
 
 	if c.Port == 0 {
-		c.Port = 8080
+		c.Port = 80
 	}
 
 	for i, r := range c.Redirects {
