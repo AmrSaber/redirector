@@ -11,9 +11,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var CloseCommand = &cli.Command{
-	Name:  "close",
-	Usage: "closes the server",
+var StopCommand = &cli.Command{
+	Name:  "stop",
+	Usage: "stops the server",
 	Action: func(c *cli.Context) error {
 		logger.ResetLoggers()
 
@@ -25,7 +25,7 @@ var CloseCommand = &cli.Command{
 		defer conn.Close()
 		conn.SetDeadline(time.Now().Add(2 * time.Second))
 
-		_, err = conn.Write([]byte(utils.SOCKET_MESSAGE_CLOSE + "\n"))
+		_, err = conn.Write([]byte(utils.SOCKET_MESSAGE_STOP + "\n"))
 		if err != nil {
 			return fmt.Errorf("error writing to socket: %w", err)
 		}

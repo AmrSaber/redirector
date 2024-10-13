@@ -75,7 +75,7 @@ func StartUnixSocketListener(ctx context.Context) <-chan error {
 				case utils.SOCKET_MESSAGE_PING:
 					conn.Write([]byte("PONG"))
 
-				case utils.SOCKET_MESSAGE_CLOSE:
+				case utils.SOCKET_MESSAGE_STOP:
 					conn.Write([]byte("OK"))
 					cancel()
 
