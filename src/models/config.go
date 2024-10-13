@@ -16,7 +16,7 @@ type Config struct {
 
 	Port int `yaml:"port"`
 
-	TempRedirect bool `yaml:"temp-redirect"`
+	TempRedirect *bool `yaml:"temp-redirect"`
 
 	UrlConfigRefresh UrlRefreshOptions `yaml:"url-config-refresh"`
 
@@ -53,6 +53,8 @@ type RedirectAuth struct {
 	Realm    string `yaml:"realm"`
 }
 
+var _DEFAULT_TEMP_REDIRECT = true
+
 func NewConfig(source, uri string) *Config {
 	return &Config{
 		Source:    source,
@@ -81,9 +83,13 @@ func (c *Config) Load(yamlBody []byte) error {
 		c.Port = 80
 	}
 
+	if c.TempRedirect == nil {
+		c.TempRedirect = &_DEFAULT_TEMP_REDIRECT
+	}
+
 	for i, r := range c.Redirects {
 		if r.TempRedirect == nil {
-			c.Redirects[i].TempRedirect = &c.TempRedirect
+			c.Redirects[i].TempRedirect = c.TempRedirect
 		}
 
 		if r.Auth != nil && r.Auth.Realm == "" {
