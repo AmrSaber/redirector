@@ -2,7 +2,7 @@ package active
 
 import "sync"
 
-// Simple implementation of active object patter
+// Simple implementation of active object pattern
 type ActiveObject struct {
 	commandsChan chan func()
 
@@ -33,7 +33,7 @@ func (active *ActiveObject) Close() {
 }
 
 // Asynchronously adds a command at the end of the commands queue
-// Use with cautious as this is unbound by back pressure
+// Use with caution as this is unbound by back pressure
 func (active *ActiveObject) DispatchCommand(command func()) {
 	active.dispatchWaitGroup.Add(1)
 	go func() {

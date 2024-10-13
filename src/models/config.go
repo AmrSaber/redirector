@@ -3,9 +3,11 @@ package models
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
+	"github.com/AmrSaber/redirector/src/utils"
 	"gopkg.in/yaml.v3"
 )
 
@@ -14,13 +16,37 @@ type Config struct {
 	ConfigURI string    `yaml:"config-uri"`
 	LoadedAt  time.Time `yaml:"loaded-at"`
 
-	Port int `yaml:"port"`
-
+	Port         int   `yaml:"port"`
 	TempRedirect *bool `yaml:"temp-redirect"`
 
-	UrlConfigRefresh UrlRefreshOptions `yaml:"url-config-refresh"`
+	Auth             *AuthSchema        `yaml:"auth,omitempty"`
+	UrlConfigRefresh *UrlRefreshOptions `yaml:"url-config-refresh,omitempty"` // TODO make into pointer
 
 	Redirects []Redirect `yaml:"redirects"`
+}
+
+type AuthSchema struct {
+	BasicAuth map[string]*BasicAuthSchema `yaml:"basic-auth,omitempty"`
+}
+
+type BasicAuthSchema struct {
+	Realm string          `yaml:"realm"`
+	Users []BasicAuthUser `yaml:"users"`
+}
+
+func (auth BasicAuthSchema) FindMatchingUser(username string) *BasicAuthUser {
+	for _, userConfig := range auth.Users {
+		if userConfig.Username == username {
+			return &userConfig
+		}
+	}
+
+	return nil
+}
+
+type BasicAuthUser struct {
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }
 
 type UrlRefreshOptions struct {
@@ -47,12 +73,6 @@ type RefreshDomain struct {
 	RefreshOn string `yaml:"refresh-on"`
 }
 
-type RedirectAuth struct {
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-	Realm    string `yaml:"realm"`
-}
-
 var _DEFAULT_TEMP_REDIRECT = true
 
 func NewConfig(source, uri string) *Config {
@@ -75,8 +95,22 @@ func (c *Config) Load(yamlBody []byte) error {
 	c.copyFrom(&parsedConfig)
 	c.LoadedAt = time.Now()
 
-	if c.UrlConfigRefresh.CacheTTL == 0 {
-		c.UrlConfigRefresh.CacheTTL, _ = time.ParseDuration("6h")
+	if c.Auth != nil {
+		for _, auth := range c.Auth.BasicAuth {
+			if auth.Realm == "" {
+				auth.Realm = utils.DEFAULT_REALM
+			}
+		}
+	}
+
+	if c.Source == SOURCE_URL {
+		if c.UrlConfigRefresh == nil {
+			c.UrlConfigRefresh = &UrlRefreshOptions{}
+		}
+
+		if c.UrlConfigRefresh.CacheTTL == 0 {
+			c.UrlConfigRefresh.CacheTTL, _ = time.ParseDuration("6h")
+		}
 	}
 
 	if c.Port == 0 {
@@ -92,8 +126,13 @@ func (c *Config) Load(yamlBody []byte) error {
 			c.Redirects[i].TempRedirect = c.TempRedirect
 		}
 
-		if r.Auth != nil && r.Auth.Realm == "" {
-			c.Redirects[i].Auth.Realm = "Restricted"
+		// Add actual auth objects to redirect for simpler authentication
+		if len(r.AuthNames) > 0 {
+			r.ActualAuths.BasicAuth = make(map[string]*BasicAuthSchema)
+
+			for _, authName := range r.AuthNames {
+				r.ActualAuths.BasicAuth[authName] = c.Auth.BasicAuth[authName]
+			}
 		}
 	}
 
@@ -104,22 +143,63 @@ func (c *Config) Load(yamlBody []byte) error {
 func (c Config) validate() error {
 	errors := []string{}
 
-	// Validate that each "from" is a valid domain name and each "to" is a valid URL
+	// Validate auth
+	if c.Auth != nil {
+		for key, auth := range c.Auth.BasicAuth {
+			// Validate that each object contains a username and a password
+			for i, userConfig := range auth.Users {
+				if userConfig.Username == "" {
+					errors = append(errors, fmt.Sprintf(`Auth "username" must be provided [@basic-auth %q #%d]`, key, i))
+				}
+
+				if userConfig.Password == "" {
+					errors = append(errors, fmt.Sprintf(`Auth "password" must be provided [@basic-auth %q #%d]`, key, i))
+				}
+			}
+		}
+
+		// Validate that there are no duplicate usernames
+		{
+			authUsers := make(map[string][]string, 0)
+			for key, auth := range c.Auth.BasicAuth {
+				for i, userConfig := range auth.Users {
+					username := userConfig.Username
+					authUsers[username] = append(authUsers[username], fmt.Sprintf("%q [#%d]", key, i))
+				}
+			}
+
+			for username, instances := range authUsers {
+				if len(instances) > 1 {
+					instances = utils.MapSlice(instances, func(value string) string { return fmt.Sprintf("  - %s", value) })
+
+					errors = append(
+						errors,
+						fmt.Sprintf(
+							"Found duplicate username %q in basic-auth at:\n%s",
+							username,
+							strings.Join(instances, "\n"),
+						),
+					)
+				}
+			}
+		}
+	}
 
 	for i, r := range c.Redirects {
 		// Trim trailing slash from each domain
 		r.From = strings.TrimSuffix(r.From, "/")
 		r.To = strings.TrimSuffix(r.To, "/")
 
-		if !domainRegex.MatchString(r.From) {
+		// Validate that each "from" is a valid domain name and each "to" is a valid URL
+		if !utils.DomainRegex.MatchString(r.From) {
 			errors = append(errors, fmt.Sprintf(`Invalid "from" domain [#%d]: %s`, i, r.From))
 		}
 
-		if !urlRegex.MatchString(r.To) {
+		if !utils.UrlRegex.MatchString(r.To) {
 			errors = append(errors, fmt.Sprintf(`Invalid "to" URL [#%d]: %s`, i, r.To))
 		}
 
-		if r.PreservePath && hasPathRegex.MatchString(r.To) {
+		if r.PreservePath && utils.HasPathRegex.MatchString(r.To) {
 			errors = append(errors, fmt.Sprintf(`"To" URL cannot contain path and set preserve path [#%d]: %s`, i, r.To))
 		}
 
@@ -139,25 +219,47 @@ func (c Config) validate() error {
 					),
 				)
 			}
-
 		}
 
-		if r.Auth != nil && r.Auth.Username == "" {
-			errors = append(errors, fmt.Sprintf(`Auth "username" must be provided [#%d]`, i))
-		}
+		if len(r.AuthNames) > 0 {
+			realms := make(map[string]any)
+			availableAuths := c.GetAvailableAuthNames()
+			for _, authName := range r.AuthNames {
+				if slices.Contains(availableAuths, authName) {
+					realm := c.Auth.BasicAuth[authName].Realm
+					if realm == "" {
+						realm = utils.DEFAULT_REALM
+					}
 
-		if r.Auth != nil && r.Auth.Password == "" {
-			errors = append(errors, fmt.Sprintf(`Auth "password" must be provided [#%d]`, i))
+					realms[realm] = struct{}{}
+				} else {
+					errors = append(errors, fmt.Sprintf("Auth %q not found [@redirect#%d]", authName, i))
+				}
+			}
+
+			// Validate that there are no mixed realms
+			if len(realms) > 1 {
+				foundRealms := utils.MapSlice(utils.GetMapKeys(realms), func(str string) string { return fmt.Sprintf("%q", str) })
+				errors = append(
+					errors,
+					fmt.Sprintf(
+						"Found mixed realms (%s) at redirect #%d. All linked auths must have the same realm",
+						strings.Join(foundRealms, ", "), i,
+					),
+				)
+			}
 		}
 	}
 
-	for i, d := range c.UrlConfigRefresh.RefreshDomains {
-		if !domainRegex.MatchString(d.Domain) {
-			errors = append(errors, fmt.Sprintf(`Invalid "domain" for refresh domains [#%d]: %s`, i, d.Domain))
-		}
+	if c.UrlConfigRefresh != nil {
+		for i, d := range c.UrlConfigRefresh.RefreshDomains {
+			if !utils.DomainRegex.MatchString(d.Domain) {
+				errors = append(errors, fmt.Sprintf(`Invalid "domain" for refresh domains [#%d]: %s`, i, d.Domain))
+			}
 
-		if d.RefreshOn != REFRESH_ON_HIT && d.RefreshOn != REFRESH_ON_MISS {
-			errors = append(errors, fmt.Sprintf(`Invalid "refresh-on" for refresh domains [#%d]: %s`, i, d.RefreshOn))
+			if d.RefreshOn != REFRESH_ON_HIT && d.RefreshOn != REFRESH_ON_MISS {
+				errors = append(errors, fmt.Sprintf(`Invalid "refresh-on" for refresh domains [#%d]: %s`, i, d.RefreshOn))
+			}
 		}
 	}
 
@@ -166,6 +268,16 @@ func (c Config) validate() error {
 	} else {
 		return nil
 	}
+}
+
+func (c Config) GetAvailableAuthNames() []string {
+	auths := make([]string, 0)
+	if c.Auth != nil {
+		for key := range c.Auth.BasicAuth {
+			auths = append(auths, key)
+		}
+	}
+	return auths
 }
 
 func (c Config) IsStale() bool {
@@ -177,6 +289,7 @@ func (c *Config) copyFrom(other *Config) {
 	c.Port = other.Port
 	c.TempRedirect = other.TempRedirect
 
+	c.Auth = other.Auth
 	c.UrlConfigRefresh = other.UrlConfigRefresh
 	c.Redirects = other.Redirects
 }
