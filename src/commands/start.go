@@ -2,14 +2,14 @@ package commands
 
 import (
 	"context"
-	"fmt"
-	"net/http"
+	"errors"
 	"os"
 	"os/signal"
+	"sync"
 
 	"github.com/AmrSaber/redirector/src/config"
 	"github.com/AmrSaber/redirector/src/lib/logger"
-	"github.com/AmrSaber/redirector/src/server"
+	"github.com/AmrSaber/redirector/src/servers"
 	"github.com/urfave/cli/v2"
 )
 
@@ -70,37 +70,6 @@ var StartCommand = &cli.Command{
 			return nil
 		}
 
-		server := server.SetupServer(configManager)
-		serverError := make(chan error)
-		done := make(chan error)
-
-		// Start server
-		go func() {
-			logger.Std.Println("Starting server...")
-			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				serverError <- fmt.Errorf("could not start server: %w", err)
-			}
-		}()
-
-		// Stop server on SIGINT
-		go func() {
-			select {
-			case <-ctx.Done():
-				logger.Std.Println("Stopping server...")
-
-				if err := server.Shutdown(context.Background()); err != nil {
-					done <- fmt.Errorf("error stopping server: %w", err)
-				} else {
-					logger.Std.Println("Server stopped")
-					done <- nil
-				}
-
-			// Incase server could not start, exit directly bubbling the error
-			case err := <-serverError:
-				done <- err
-			}
-		}()
-
 		// Listen for interrupts to cancel context
 		go func() {
 			sigint := make(chan os.Signal, 1)
@@ -110,6 +79,39 @@ var StartCommand = &cli.Command{
 			cancel()
 		}()
 
-		return <-done
+		httpDoneChan := servers.StartHttpServer(ctx, configManager)
+		socketDoneChan := servers.StartUnixSocketListener(ctx)
+
+		errs := make([]error, 0, 2)
+		var wg sync.WaitGroup
+		wg.Add(2)
+
+		go func() {
+			defer wg.Done()
+
+			if err := <-httpDoneChan; err != nil {
+				errs = append(errs, err)
+			}
+
+			cancel()
+		}()
+
+		go func() {
+			defer wg.Done()
+
+			if err := <-socketDoneChan; err != nil {
+				errs = append(errs, err)
+			}
+
+			cancel()
+		}()
+
+		wg.Wait()
+
+		if len(errs) > 0 {
+			return errors.Join(errs...)
+		}
+
+		return nil
 	},
 }

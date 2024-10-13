@@ -1,6 +1,7 @@
-package server
+package servers
 
 import (
+	"context"
 	"crypto/sha256"
 	"crypto/subtle"
 	"fmt"
@@ -12,13 +13,33 @@ import (
 	"github.com/AmrSaber/redirector/src/models"
 )
 
-func SetupServer(configManager *config.ConfigManager) *http.Server {
-	server := http.Server{
-		Addr:    fmt.Sprintf(":%d", configManager.GetPort()),
-		Handler: getRedirectionMux(configManager),
-	}
+func StartHttpServer(ctx context.Context, configManager *config.ConfigManager) <-chan error {
+	doneChan := make(chan error)
 
-	return &server
+	go func() {
+		defer close(doneChan)
+
+		server := http.Server{
+			Addr:    fmt.Sprintf(":%d", configManager.GetPort()),
+			Handler: getRedirectionMux(configManager),
+		}
+
+		// Close server on end of context
+		go func() {
+			<-ctx.Done()
+
+			logger.Std.Println("Stopping HTTP server...")
+			_ = server.Shutdown(context.Background())
+			logger.Std.Println("HTTP server stopped")
+		}()
+
+		logger.Std.Printf("Server listening on http://localhost:%d\n", configManager.GetPort())
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			doneChan <- fmt.Errorf("could not start http server: %w", err)
+		}
+	}()
+
+	return doneChan
 }
 
 func getRedirectionMux(configs *config.ConfigManager) http.Handler {
