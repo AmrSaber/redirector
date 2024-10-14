@@ -43,6 +43,7 @@ docker run -p 8080:8080 -v /path/to/config.yaml:/config.yaml ghcr.io/amrsaber/re
 - `start`: starts the server, see more details below
 - `stop`: stops the server if it's running and returns "OK", otherwise returns error
 - `ping`: pings the server to make sure it's running and healthy, returns "PONG" if server is running, otherwise returns error
+- `version`: displays current version of redirector
 
 To view commands and their documentation and flags, start the application with `--help`, `-h`, `help`, `h`, or without any commands. And you can use `--help` or `-h` with any command to view more details about it.
 
