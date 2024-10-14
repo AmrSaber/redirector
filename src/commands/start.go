@@ -10,6 +10,7 @@ import (
 	"github.com/AmrSaber/redirector/src/config"
 	"github.com/AmrSaber/redirector/src/lib/logger"
 	"github.com/AmrSaber/redirector/src/servers"
+	"github.com/AmrSaber/redirector/src/utils"
 	"github.com/urfave/cli/v2"
 )
 
@@ -37,6 +38,8 @@ var StartCommand = &cli.Command{
 		},
 	},
 	Action: func(c *cli.Context) error {
+		logger.Std.Printf("Starting redirector %s\n", utils.GetVersion())
+
 		// Runtime context
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()

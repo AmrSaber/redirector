@@ -5,10 +5,16 @@ import (
 
 	"github.com/AmrSaber/redirector/src/commands"
 	"github.com/AmrSaber/redirector/src/lib/logger"
+	"github.com/AmrSaber/redirector/src/utils"
 	"github.com/urfave/cli/v2"
 )
 
+var version string
+
 func main() {
+	// Set version number if it's loaded
+	utils.SetVersion(version)
+
 	app := &cli.App{
 		Name:  "redirector",
 		Usage: "Redirects requests to different servers",
@@ -17,6 +23,7 @@ func main() {
 			commands.StartCommand,
 			commands.PingCommand,
 			commands.StopCommand,
+			commands.VersionCommand,
 		},
 	}
 

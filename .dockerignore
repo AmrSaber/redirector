@@ -1,5 +1,5 @@
 .github
-.git
 .vscode
 build
+dist
 testing
