@@ -13,7 +13,9 @@ var version string
 
 func main() {
 	// Set version number if it's loaded
-	utils.SetVersion(version)
+	if version != "" {
+		utils.SetVersion(version)
+	}
 
 	app := &cli.App{
 		Name:  "redirector",

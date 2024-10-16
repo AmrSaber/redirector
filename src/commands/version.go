@@ -13,6 +13,10 @@ var VersionCommand = &cli.Command{
 		logger.ResetLoggersFlags()
 
 		version := utils.GetVersion()
+		if version == "" {
+			version = "??"
+		}
+
 		logger.Std.Println(version)
 
 		return nil

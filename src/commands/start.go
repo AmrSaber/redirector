@@ -38,7 +38,9 @@ var StartCommand = &cli.Command{
 		},
 	},
 	Action: func(c *cli.Context) error {
-		logger.Std.Printf("Starting redirector %s\n", utils.GetVersion())
+		if appVersion := utils.GetVersion(); appVersion != "" {
+			logger.Std.Printf("Starting redirector %s\n", utils.GetVersion())
+		}
 
 		// Runtime context
 		ctx, cancel := context.WithCancel(context.Background())

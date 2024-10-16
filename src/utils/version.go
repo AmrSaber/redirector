@@ -22,7 +22,7 @@ func GetVersion() string {
 		return gitVersion
 	}
 
-	return "??"
+	return ""
 }
 
 func getVersionFromGit() string {
@@ -30,19 +30,25 @@ func getVersionFromGit() string {
 		return ""
 	}
 
-	lastTag, err := exec.Command("git", "describe", "--tags", "--abbrev=0").Output()
+	tag, err := exec.Command("git", "describe", "--tags").Output()
 	if err != nil {
 		return ""
 	}
 
-	lastTag = bytes.TrimSpace(lastTag)
+	tag = bytes.TrimSpace(tag)
 
-	tagCommitHash, _ := exec.Command("git", "show", string(lastTag), `--pretty=format:"%h"`, "--no-patch").Output()
-	lastCommitHash, _ := exec.Command("git", "show", `--pretty=format:"%h"`, "--no-patch").Output()
-
-	if !bytes.Equal(tagCommitHash, lastCommitHash) {
-		lastTag = append(lastTag, '+')
+	if isRepoDirty() {
+		tag = append(tag, '+')
 	}
 
-	return string(lastTag)
+	return string(tag)
+}
+
+func isRepoDirty() bool {
+	cmd := exec.Command("git", "status", "--porcelain")
+	output, _ := cmd.Output()
+	output = bytes.TrimSpace(output)
+
+	// Empty output = Clean repo
+	return len(output) != 0
 }

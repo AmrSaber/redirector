@@ -1,6 +1,8 @@
 # Build stage
 FROM golang:1.22-alpine AS build
 
+RUN apk add git
+
 WORKDIR /app
 
 COPY go.mod ./
@@ -9,7 +11,7 @@ RUN go mod download
 
 COPY ./ ./
 
-RUN go build --ldflags '-s -w -X main.version=$(git describe --tags)' -o /redirector src/main.go
+RUN go build --ldflags "-s -w -X main.version=$(git describe --tags)" -o /redirector src/main.go
 
 
 # Deploy stage
