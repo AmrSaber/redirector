@@ -160,26 +160,28 @@ func (c Config) validate() error {
 			}
 		}
 
-		// Validate that there are no duplicate usernames
+		// Validate that there are no duplicate usernames within same schema
 		{
-			authUsers := make(map[string][]string, 0)
-			for key, auth := range c.Auth.BasicAuth {
+			for authName, auth := range c.Auth.BasicAuth {
+				authUsers := make(map[string][]int, len(auth.Users))
+
 				for i, userConfig := range auth.Users {
 					username := userConfig.Username
-					authUsers[username] = append(authUsers[username], fmt.Sprintf("%q [#%d]", key, i))
+					authUsers[username] = append(authUsers[username], i)
 				}
-			}
 
-			for username, instances := range authUsers {
-				if len(instances) > 1 {
-					instances = utils.MapSlice(instances, func(value string) string { return fmt.Sprintf("  - %s", value) })
+				for username, occurrences := range authUsers {
+					if len(occurrences) <= 1 {
+						continue
+					}
 
 					errors = append(
 						errors,
 						fmt.Sprintf(
-							"Found duplicate username %q in basic-auth at:\n%s",
+							"Found duplicate username %q in basic-auth %q at: %s",
 							username,
-							strings.Join(instances, "\n"),
+							authName,
+							strings.Join(utils.ToStringSlice(occurrences), ", "),
 						),
 					)
 				}

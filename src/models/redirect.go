@@ -90,7 +90,12 @@ func (redirect Redirect) findMatchingBasicAuth(req *http.Request) *BasicAuthSche
 		return nil
 	}
 
-	for _, auth := range redirect.ActualAuths.BasicAuth {
+	// Look for user in auth names in reverse
+	// so that the last occurrence of the username takes precedence
+	for i := len(redirect.AuthNames) - 1; i >= 0; i-- {
+		authName := redirect.AuthNames[i]
+		auth := redirect.ActualAuths.BasicAuth[authName]
+
 		for _, userConfig := range auth.Users {
 			if userConfig.Username == reqUsername {
 				return auth

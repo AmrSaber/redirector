@@ -1,5 +1,7 @@
 package utils
 
+import "fmt"
+
 func GetMapKeys[K comparable, V any](m map[K]V) []K {
 	keys := make([]K, 0, len(m))
 	for key := range m {
@@ -25,4 +27,8 @@ func MapSlice[S any, T any](s []S, mapper func(S) T) []T {
 	}
 
 	return mapped
+}
+
+func ToStringSlice[S any](s []S) []string {
+	return MapSlice(s, func(value S) string { return fmt.Sprint(value) })
 }
