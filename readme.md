@@ -125,7 +125,7 @@ auth:
       realm: "MyRealm"
 
       # Users defined within this schema. Each of them must have a non-empty username and password
-      # username cannot repeat across all defined basic-auth schemas
+      # username cannot repeat across same basic-auth schema
       users:
         - username: user-1
           password: 1234
@@ -170,6 +170,7 @@ redirects:
 
     # Auth configuration, must be one of the schemas defined in `auth` global block
     # If several basic-auth schemas are used, all of them must have the same realm
+    # If a username is repeated across several schemas, the last provided schema will take precedence
     auth:
       - some-auth
       - some-other-auth
