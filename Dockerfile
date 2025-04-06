@@ -17,7 +17,7 @@ RUN go build --ldflags "-s -w -X main.version=$(git describe --tags)" -o /redire
 # Deploy stage
 FROM alpine
 
-HEALTHCHECK CMD /redirector ping -q
+HEALTHCHECK --interval=5s --start-period=30s --start-interval=1s CMD /redirector ping -q
 
 WORKDIR /
 
