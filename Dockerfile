@@ -1,5 +1,5 @@
 # Build stage
-FROM golang:1.22-alpine AS build
+FROM golang:1.24-alpine AS build
 
 RUN apk add git
 
